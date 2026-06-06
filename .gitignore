@@ -3,14 +3,11 @@ push.env
 *.env
 !*.env.sample
 
-# results: large files go to S3, not git
-**/results/**/*.mp4
-**/results/**/*.png
-**/results/**/*.jpg
-**/results/**/*.pt
-**/results/**/*.ckpt
-**/results/**/*.safetensors
-**/results/**/*.zip
+# results: bench output stays local; only CSVs and explicit notes are tracked
+**/results/**
+!**/results/**/
+!**/results/**/*.csv
+!**/results/**/.gitkeep
 
 # python
 __pycache__/

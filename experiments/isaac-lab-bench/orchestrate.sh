@@ -2,12 +2,12 @@
 # Drive an Isaac Lab benchmark remotely via SSM Run Command.
 #
 # Steps:
-#   1. Read push.env (INSTANCE_ID, AWS_REGION, optional overrides).
-#   2. Upload remote/run_bench.sh to the instance under /home/ubuntu/.
+#   1. Read ssm.env (INSTANCE_ID, AWS_REGION, optional overrides).
+#   2. Upload scripts/run_bench.sh to the instance under /home/ubuntu/.
 #   3. Launch the benchmark in the background (nohup) and poll until the
 #      worker process disappears.
 #   4. Pull summary.csv and per-seed dmon logs back to ./results/<tag>/.
-#   5. Print dmon stats locally via remote/dmon_stats.py.
+#   5. Print dmon stats locally via scripts/dmon_stats.py.
 #
 # Usage:
 #   bash orchestrate.sh <profile>
@@ -28,20 +28,36 @@ Profiles:
   g1-num-envs     num_envs sweep {4096,8192,16384}, 1 seed, 100 iters
 
 Override profile presets via env vars (e.g. NUM_ENVS=2048 SEEDS="42 7").
-Required in push.env: INSTANCE_ID, AWS_REGION.
-Optional in push.env: REMOTE_USER, ISAACLAB_DIR, CONDA_SH, CONDA_ENV,
+Required in ssm.env: INSTANCE_ID, AWS_REGION.
+Optional in ssm.env: REMOTE_USER, ISAACLAB_DIR, CONDA_SH, CONDA_ENV,
                       DEST_BASE, RUN_TAG_PREFIX.
 EOF
 }
 
 PROFILE="${1:-}"
 [ -n "$PROFILE" ] || { usage; exit 1; }
-[ -f push.env ]   || { echo "push.env not found in $(pwd). Copy push.env.sample first." >&2; exit 1; }
+
+# Pre-flight: dependency check (no silent failures).
+for _cmd in aws jq python3; do
+  command -v "$_cmd" >/dev/null 2>&1 || {
+    echo "[orchestrate] ERROR: '$_cmd' not found in PATH." >&2
+    case "$_cmd" in
+      aws)     echo "  Install: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" >&2 ;;
+      jq)      echo "  Install: brew install jq  /  sudo apt-get install jq" >&2 ;;
+      python3) echo "  Install: brew install python3  /  sudo apt-get install python3" >&2 ;;
+    esac
+    echo "  (DCV mode — running on the EC2 itself — does not need this. Use scripts/run_bench.sh directly.)" >&2
+    exit 1
+  }
+done
+unset _cmd
+
+[ -f ssm.env ]   || { echo "ssm.env not found in $(pwd). Copy ssm.env.sample first." >&2; exit 1; }
 
 # shellcheck disable=SC1091
-source push.env
-: "${INSTANCE_ID:?INSTANCE_ID not set in push.env}"
-: "${AWS_REGION:?AWS_REGION not set in push.env}"
+source ssm.env
+: "${INSTANCE_ID:?INSTANCE_ID not set in ssm.env}"
+: "${AWS_REGION:?AWS_REGION not set in ssm.env}"
 
 REMOTE_USER="${REMOTE_USER:-ubuntu}"
 ISAACLAB_DIR="${ISAACLAB_DIR:-/home/${REMOTE_USER}/IsaacLab}"
@@ -135,8 +151,8 @@ ssm_get() {
 
 # --- 1. Upload run_bench.sh -----------------------------------------------
 
-echo "[orchestrate] uploading remote/run_bench.sh to $INSTANCE_ID"
-SCRIPT_B64=$(base64 < remote/run_bench.sh | tr -d '\n')
+echo "[orchestrate] uploading scripts/run_bench.sh to $INSTANCE_ID"
+SCRIPT_B64=$(base64 < scripts/run_bench.sh | tr -d '\n')
 UPLOAD_CMD=$(printf 'umask 022; echo %s | base64 -d > /home/%s/run_bench.sh && chmod +x /home/%s/run_bench.sh && chown %s:%s /home/%s/run_bench.sh && wc -l /home/%s/run_bench.sh' \
   "$SCRIPT_B64" "$REMOTE_USER" "$REMOTE_USER" "$REMOTE_USER" "$REMOTE_USER" "$REMOTE_USER" "$REMOTE_USER")
 CID=$(ssm_send "$UPLOAD_CMD")
@@ -202,7 +218,7 @@ done
 if command -v python3 >/dev/null; then
   echo
   echo "=== dmon summary (markdown) ==="
-  python3 remote/dmon_stats.py --format md "$LOCAL_OUT"/run-seed*/nvidia-smi-dmon.log || true
+  python3 scripts/dmon_stats.py --format md "$LOCAL_OUT"/run-seed*/nvidia-smi-dmon.log || true
 fi
 
 echo

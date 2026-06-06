@@ -1,0 +1,2 @@
+seed,iters,task,num_envs,app_launch_ms,total_start_ms,mean_total_fps,mean_collection_fps,max_rewards,wall_clock_s
+42,50,Isaac-Velocity-Rough-G1-v0,4096,206301.356864,267255.322647,71349.8,76871.65680223242,-0.6611278653144836,355
