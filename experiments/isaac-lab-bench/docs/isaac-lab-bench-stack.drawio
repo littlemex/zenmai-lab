@@ -1,207 +1,170 @@
-<mxfile host="app.diagrams.net" modified="2026-06-06T00:00:00.000Z" agent="Claude Code" version="21.0.0" type="device">
+<mxfile host="app.diagrams.net" agent="Claude Code">
   <diagram id="isaac-lab-bench" name="Isaac Lab Bench レイヤースタック">
-    <mxGraphModel dx="1422" dy="762" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+    <mxGraphModel dx="1344" dy="943" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <!-- タイトル -->
-        <mxCell id="title" value="Isaac Lab Bench — レイヤースタック &amp; コールグラフ" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="210" y="6" width="750" height="24" as="geometry" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#333333;" value="Isaac Lab Bench — レイヤースタック &amp; コールグラフ" vertex="1">
+          <mxGeometry height="24" width="750" x="198" y="11" as="geometry" />
         </mxCell>
-
-        <!-- 凡例 -->
-        <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="20" y="6" width="176" height="90" as="geometry" />
+        <mxCell id="legend_bg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="" vertex="1">
+          <mxGeometry height="90" width="176" x="965" y="133" as="geometry" />
         </mxCell>
-        <mxCell id="legend_title" value="凡例" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="30" y="10" width="150" height="16" as="geometry" />
+        <mxCell id="legend_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=1;" value="凡例" vertex="1">
+          <mxGeometry height="16" width="150" x="975" y="137" as="geometry" />
         </mxCell>
-        <mxCell id="legend_ours" value="zenmai-lab（自作）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="30" y="30" width="156" height="16" as="geometry" />
+        <mxCell id="legend_ours" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=9;" value="zenmai-lab（自作）" vertex="1">
+          <mxGeometry height="16" width="156" x="975" y="157" as="geometry" />
         </mxCell>
-        <mxCell id="legend_isaaclab" value="Isaac Lab / OSS上流" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="30" y="52" width="156" height="16" as="geometry" />
+        <mxCell id="legend_isaaclab" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=9;" value="Isaac Lab / OSS上流" vertex="1">
+          <mxGeometry height="16" width="156" x="975" y="179" as="geometry" />
         </mxCell>
-        <mxCell id="legend_nvidia" value="NVIDIA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1">
-          <mxGeometry x="30" y="74" width="156" height="16" as="geometry" />
+        <mxCell id="legend_nvidia" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=9;" value="NVIDIA" vertex="1">
+          <mxGeometry height="16" width="156" x="975" y="201" as="geometry" />
         </mxCell>
-
-        <!-- 列ヘッダー -->
-        <mxCell id="col1_header" value="zenmai-lab（自作）" style="text;html=1;strokeColor=none;fillColor=#DDEEFF;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#2055A0;" vertex="1" parent="1">
-          <mxGeometry x="20" y="104" width="220" height="24" as="geometry" />
+        <mxCell id="col1_header" parent="1" style="text;html=1;strokeColor=none;fillColor=#DDEEFF;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#2055A0;" value="zenmai-lab（自作）" vertex="1">
+          <mxGeometry height="24" width="220" x="222" y="69" as="geometry" />
         </mxCell>
-        <mxCell id="col2_header" value="Isaac Lab / OSS上流" style="text;html=1;strokeColor=none;fillColor=#E8F5E2;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#3A6B28;" vertex="1" parent="1">
-          <mxGeometry x="260" y="104" width="400" height="24" as="geometry" />
+        <mxCell id="col2_header" parent="1" style="text;html=1;strokeColor=none;fillColor=#E8F5E2;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#3A6B28;" value="Isaac Lab / OSS上流" vertex="1">
+          <mxGeometry height="24" width="400" x="462" y="69" as="geometry" />
         </mxCell>
-        <mxCell id="col3_header" value="NVIDIA" style="text;html=1;strokeColor=none;fillColor=#D6F0EF;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#1A5A58;" vertex="1" parent="1">
-          <mxGeometry x="680" y="104" width="200" height="24" as="geometry" />
+        <mxCell id="col3_header" parent="1" style="text;html=1;strokeColor=none;fillColor=#D6F0EF;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=1;fontColor=#1A5A58;" value="NVIDIA" vertex="1">
+          <mxGeometry height="24" width="200" x="882" y="69" as="geometry" />
         </mxCell>
-
-        <!-- オペレーター層 -->
-        <mxCell id="op_ssm" value="&lt;b&gt;Operator (Mac / laptop)&lt;/b&gt;&lt;br&gt;SSM モード&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;aws ssm send-command&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#AAAAAA;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="20" y="140" width="200" height="50" as="geometry" />
+        <mxCell id="op_ssm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#AAAAAA;fontSize=10;align=center;verticalAlign=middle;" value="&lt;b&gt;Operator (Mac / laptop)&lt;/b&gt;&lt;br&gt;SSM モード&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;aws ssm send-command&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="200" x="222" y="105" as="geometry" />
         </mxCell>
-        <mxCell id="op_dcv" value="&lt;b&gt;Operator (EC2 / DCV端末)&lt;/b&gt;&lt;br&gt;DCVモード&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;bash 直接実行&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#AAAAAA;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="240" y="140" width="200" height="50" as="geometry" />
+        <mxCell id="op_dcv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#AAAAAA;fontSize=10;align=center;verticalAlign=middle;" value="&lt;b&gt;Operator (EC2 / DCV端末)&lt;/b&gt;&lt;br&gt;DCVモード&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;bash 直接実行&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="200" x="468" y="105" as="geometry" />
         </mxCell>
-
-        <!-- orchestrate.sh（SSMモード専用） -->
-        <mxCell id="orchestrate" value="&lt;b&gt;orchestrate.sh&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;SSMモード専用&lt;/font&gt;&lt;br&gt;1. ssm.env 読み込み (INSTANCE_ID, AWS_REGION)&lt;br&gt;2. run_bench.sh を Base64 でSSM転送&lt;br&gt;3. SWEEP ループ: run_one() → nohup起動 → pgrep ポーリング (4秒)&lt;br&gt;4. 完了後 tar.gz でリモート結果取得 → results/&amp;lt;tag&amp;gt;/&lt;br&gt;5. dmon_stats.py をローカル実行（Mac側）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="20" y="230" width="220" height="96" as="geometry" />
+        <mxCell id="orchestrate" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;orchestrate.sh&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;SSMモード専用&lt;/font&gt;&lt;br&gt;1. ssm.env 読み込み&lt;br&gt;2. run_bench.sh を Base64 でSSM転送&lt;br&gt;3. SWEEP ループ&lt;br&gt;4. 完了後 tar.gz でリモート結果取得&amp;nbsp;&lt;br&gt;5. dmon_stats.py をローカル実行" vertex="1">
+          <mxGeometry height="96" width="220" x="212" y="195" as="geometry" />
         </mxCell>
-
-        <!-- SWEEP注記 -->
-        <mxCell id="note_sweep" value="&lt;i&gt;g1-num-envs SWEEP ループ:&lt;br&gt;4096 → 8192 → 16384 (num_envs)&lt;br&gt;orchestrate.sh L200&lt;/i&gt;" style="text;html=1;strokeColor=#CCAA44;fillColor=#FFFDE7;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#555555;" vertex="1" parent="1">
-          <mxGeometry x="20" y="336" width="220" height="46" as="geometry" />
+        <mxCell id="note_sweep" parent="1" style="text;html=1;strokeColor=#CCAA44;fillColor=#FFFDE7;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#555555;" value="&lt;i&gt;g1-num-envs SWEEP ループ:&lt;br&gt;4096 → 8192 → 16384 (num_envs)&lt;br&gt;orchestrate.sh L200&lt;/i&gt;" vertex="1">
+          <mxGeometry height="46" width="162" x="40" y="256" as="geometry" />
         </mxCell>
-
-        <!-- run_bench.sh -->
-        <mxCell id="run_bench" value="&lt;b&gt;scripts/run_bench.sh&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;EC2上で実行（両モード共通）&lt;/font&gt;&lt;br&gt;for SEED in $SEEDS: (シードループ)&lt;br&gt;  nvidia-smi dmon -s upcm -d 1 &amp;amp; → dmon.log&lt;br&gt;  python benchmark_rsl_rl.py --task --headless …&lt;br&gt;  grep → App Launch / FPS 抽出 → summary.csv" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="20" y="396" width="360" height="86" as="geometry" />
+        <mxCell id="run_bench" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;scripts/run_bench.sh&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;EC2上で実行&lt;/font&gt;&lt;br&gt;for SEED in $SEEDS: (シードループ)&lt;br&gt;  nvidia-smi dmon -s upcm -d 1 &amp;amp; → dmon.log&lt;br&gt;  python benchmark_rsl_rl.py --task --headless …&lt;br&gt;  grep → App Launch / FPS 抽出 → summary.csv" vertex="1">
+          <mxGeometry height="86" width="246" x="31" y="355" as="geometry" />
         </mxCell>
-
-        <!-- dmon_stats.py（Mac側・zenmai-lab列） -->
-        <mxCell id="dmon_stats" value="&lt;b&gt;scripts/dmon_stats.py&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;Mac（ローカル）で実行&lt;/font&gt;&lt;br&gt;nvidia-smi-dmon.log を集計&lt;br&gt;SM% avg/p95/max, MEM%, PWR, MCLK/PCLK&lt;br&gt;出力: text / csv / md（レポート用）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="20" y="668" width="220" height="74" as="geometry" />
+        <mxCell id="dmon_stats" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4DA6FF;strokeColor=#2E7FCC;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;scripts/dmon_stats.py&lt;/b&gt;  &lt;font color=&quot;#CCEECC&quot;&gt;Mac（ローカル）で実行&lt;/font&gt;&lt;br&gt;nvidia-smi-dmon.log を集計&lt;br&gt;SM% avg/p95/max, MEM%, PWR, MCLK/PCLK&lt;br&gt;出力: text / csv / md（レポート用）" vertex="1">
+          <mxGeometry height="74" width="220" x="222" y="633" as="geometry" />
         </mxCell>
-
-        <!-- benchmark_rsl_rl.py -->
-        <mxCell id="benchmark" value="&lt;b&gt;scripts/benchmarks/benchmark_rsl_rl.py&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#FFEE99&quot;&gt;★ ボトルネック調査の着地点&lt;/font&gt;&lt;br&gt;計測: App Launch Time / Total Start Time&lt;br&gt;　　  Mean Total FPS / Mean Collection FPS / Max Rewards&lt;br&gt;stdout: &amp;quot;&amp;lt;key&amp;gt;: &amp;lt;value&amp;gt; ms&amp;quot; 形式 → run_bench.sh が grep 解析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="260" y="396" width="390" height="86" as="geometry" />
+        <mxCell id="isaaclab_core" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;Isaac Lab コア&lt;/b&gt;  source/isaaclab/&lt;br&gt;タスク定義: Isaac-Velocity-Rough-G1-v0 / Isaac-Cartpole-v0 他&lt;br&gt;Robot USD/URDF + アクチュエータモデル&lt;br&gt;Manager: RewardManager / ObsManager / TerminationManager&lt;br&gt;Gymnasium ラッパー (gym.Env)&lt;br&gt;RL アダプター: rl_games / rsl_rl / skrl / SB3" vertex="1">
+          <mxGeometry height="92" width="390" x="462" y="503" as="geometry" />
         </mxCell>
-
-        <!-- Isaac Lab コア -->
-        <mxCell id="isaaclab_core" value="&lt;b&gt;Isaac Lab コア&lt;/b&gt;  source/isaaclab/&lt;br&gt;タスク定義: Isaac-Velocity-Rough-G1-v0 / Isaac-Cartpole-v0 他&lt;br&gt;Robot USD/URDF + アクチュエータモデル&lt;br&gt;Manager: RewardManager / ObsManager / TerminationManager&lt;br&gt;Gymnasium ラッパー (gym.Env)&lt;br&gt;RL アダプター: rl_games / rsl_rl / skrl / SB3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="260" y="538" width="390" height="92" as="geometry" />
+        <mxCell id="ext_deps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;外部依存 / RL エコシステム&lt;/b&gt;&lt;br&gt;(Farama) Gymnasium API&lt;br&gt;rl_games / rsl_rl / skrl&lt;br&gt;Stable-Baselines3 (SB3)" vertex="1">
+          <mxGeometry height="92" width="196" x="931" y="503" as="geometry" />
         </mxCell>
-
-        <!-- 外部依存（Gymnasium / RL libraries） -->
-        <mxCell id="ext_deps" value="&lt;b&gt;外部依存 / RL エコシステム&lt;/b&gt;&lt;br&gt;(Farama) Gymnasium API&lt;br&gt;rl_games / rsl_rl / skrl&lt;br&gt;Stable-Baselines3 (SB3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="672" y="538" width="196" height="92" as="geometry" />
+        <mxCell id="dmon_tool" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;nvidia-smi dmon&lt;/b&gt;&lt;br&gt;(NVIDIA CLI ツール)&lt;br&gt;1Hz でサンプリング:&lt;br&gt;SM% / MEM% / PWR / CLK&lt;br&gt;→ nvidia-smi-dmon.log" vertex="1">
+          <mxGeometry height="80" width="188" x="931" y="271" as="geometry" />
         </mxCell>
-
-        <!-- nvidia-smi dmon（NVIDIA列・run_bench.shと同じY） -->
-        <mxCell id="dmon_tool" value="&lt;b&gt;nvidia-smi dmon&lt;/b&gt;&lt;br&gt;(NVIDIA CLI ツール)&lt;br&gt;1Hz でサンプリング:&lt;br&gt;SM% / MEM% / PWR / CLK&lt;br&gt;→ nvidia-smi-dmon.log" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="680" y="396" width="188" height="80" as="geometry" />
+        <mxCell id="isaac_sim" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;Isaac Sim&lt;/b&gt;  /opt/IsaacSim  [NVIDIA提供]&lt;br&gt;Omniverse Kit（拡張機能ホスト）&lt;br&gt;PhysX 5 GPU パイプライン（並列物理シミュレーション）&lt;br&gt;RTX レンダラ（--headless でも初期化）&lt;br&gt;USD Fabric（高速シーングラフ更新）" vertex="1">
+          <mxGeometry height="84" width="390" x="462" y="645" as="geometry" />
         </mxCell>
-
-        <!-- Isaac Sim -->
-        <mxCell id="isaac_sim" value="&lt;b&gt;Isaac Sim&lt;/b&gt;  /opt/IsaacSim  [NVIDIA提供]&lt;br&gt;Omniverse Kit（拡張機能ホスト）&lt;br&gt;PhysX 5 GPU パイプライン（並列物理シミュレーション）&lt;br&gt;RTX レンダラ（--headless でも初期化）&lt;br&gt;USD Fabric（高速シーングラフ更新）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="260" y="680" width="390" height="84" as="geometry" />
+        <mxCell id="gpu_layer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;GPU + ドライバー&lt;/b&gt;  [NVIDIA]&lt;br&gt;NVIDIA GPU (例: L4 / A10G / H100) + CUDA ドライバー (例: R535+) / NVML&lt;br&gt;nvidia-smi dmon が SM% / MEM% / 電力 / クロックを 1Hz サンプリング" vertex="1">
+          <mxGeometry height="50" width="618" x="409" y="767" as="geometry" />
         </mxCell>
-
-        <!-- GPU + ドライバー -->
-        <mxCell id="gpu_layer" value="&lt;b&gt;GPU + ドライバー&lt;/b&gt;  [NVIDIA]&lt;br&gt;NVIDIA GPU (例: L4 / A10G / H100) + CUDA ドライバー (例: R535+) / NVML&lt;br&gt;nvidia-smi dmon が SM% / MEM% / 電力 / クロックを 1Hz サンプリング" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3DA39E;strokeColor=#2A7A76;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" vertex="1" parent="1">
-          <mxGeometry x="260" y="772" width="618" height="50" as="geometry" />
+        <mxCell id="note_flow" parent="1" style="text;html=1;strokeColor=#CCAA44;fillColor=#FFFDE7;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#555555;" value="&lt;b&gt;データフロー:&lt;/b&gt;&lt;br&gt;→ 実線: 呼び出し・起動（上→下）&lt;br&gt;--&gt; 破線: stdout / ファイル返却（下→上）" vertex="1">
+          <mxGeometry height="52" width="188" x="882" y="613" as="geometry" />
         </mxCell>
-
-        <!-- データフロー注記 -->
-        <mxCell id="note_flow" value="&lt;b&gt;データフロー:&lt;/b&gt;&lt;br&gt;→ 実線: 呼び出し・起動（上→下）&lt;br&gt;--&gt; 破線: stdout / ファイル返却（下→上）" style="text;html=1;strokeColor=#CCAA44;fillColor=#FFFDE7;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#555555;" vertex="1" parent="1">
-          <mxGeometry x="680" y="648" width="188" height="52" as="geometry" />
+        <mxCell id="arrow_j" edge="1" parent="1" source="op_ssm" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="orchestrate" value="bash orchestrate.sh &lt;profile&gt;">
+          <mxGeometry relative="1" x="-0.64" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
-
-        <!-- J: Operator(SSMモード) → orchestrate.sh -->
-        <mxCell id="arrow_j" value="bash orchestrate.sh &lt;profile&gt;" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="op_ssm" target="orchestrate" parent="1">
+        <mxCell id="arrow_k" edge="1" parent="1" source="op_dcv" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=#444444;fontSize=9;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="orchestrate" value="bash run_bench.sh（DCV直接）">
+          <mxGeometry relative="1" x="-0.7568" y="1" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="568" y="183" />
+              <mxPoint x="496" y="183" />
+              <mxPoint x="496" y="243" />
+            </Array>
+            <mxPoint x="458" y="363" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow_i" edge="1" parent="1" source="orchestrate" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="run_bench" value="SSM 経由転送・起動&lt;br&gt;(sudo -u ubuntu nohup bash run_bench.sh)">
+          <mxGeometry relative="1" x="-0.4494" y="-19" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow_a" edge="1" parent="1" source="run_bench" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="benchmark" value="python 呼び出し (--task --headless --num_envs --seed)">
+          <mxGeometry relative="1" x="-0.4703" y="23" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow_b" edge="1" parent="1" source="run_bench" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;strokeColor=#444444;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="dmon_tool" value="dmon 並列起動&lt;br&gt;(nvidia-smi dmon &amp;)">
+          <mxGeometry relative="1" x="0.1635" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="252" y="311" />
+              <mxPoint x="916" y="311" />
+            </Array>
+            <mxPoint x="258.9999999999998" y="310" as="sourcePoint" />
+            <mxPoint x="901" y="364" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow_c" edge="1" parent="1" source="benchmark" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="isaaclab_core" value="gym.make() / ManagerBasedRLEnv">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- K: Operator(DCVモード) → run_bench.sh（直接） -->
-        <mxCell id="arrow_k" value="bash run_bench.sh（DCV直接）" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="op_dcv" target="run_bench" parent="1">
-          <mxGeometry relative="1" as="geometry">
+        <mxCell id="arrow_h" edge="1" parent="1" source="isaaclab_core" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#777777;dashed=1;fontSize=9;endArrow=open;startArrow=open;startFill=0;endFill=0;" target="ext_deps" value="Gymnasium API / RL API">
+          <mxGeometry relative="1" x="-0.5696" y="13" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow_d" edge="1" parent="1" source="isaaclab_core" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="isaac_sim" value="Python API / PhysX GPU / USD Fabric 呼び出し">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow_e" edge="1" parent="1" source="isaac_sim" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="gpu_layer" value="CUDA / ドライバー呼び出し">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow_dmon_gpu" edge="1" parent="1" source="dmon_tool" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" target="gpu_layer" value="GPU直接サンプリング (NVML経由)">
+          <mxGeometry relative="1" x="-0.823" y="-52" as="geometry">
+            <mxPoint as="offset" />
             <Array as="points">
-              <mxPoint x="340" y="218" />
-              <mxPoint x="110" y="218" />
-              <mxPoint x="110" y="396" />
+              <mxPoint x="1150" y="351" />
+              <mxPoint x="1150" y="792" />
             </Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- I: orchestrate.sh → run_bench.sh（SSM経由転送・起動） -->
-        <mxCell id="arrow_i" value="SSM 経由転送・起動&lt;br&gt;(sudo -u ubuntu nohup bash run_bench.sh)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="orchestrate" target="run_bench" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="arrow_f" edge="1" parent="1" source="benchmark" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" target="run_bench" value="stdout → bench.log → grep → summary.csv">
+          <mxGeometry relative="1" x="0.2541" y="16" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
         </mxCell>
-
-        <!-- A: run_bench.sh → benchmark_rsl_rl.py（横・実線） -->
-        <mxCell id="arrow_a" value="python 呼び出し (--task --headless --num_envs --seed)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="run_bench" target="benchmark" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- B: run_bench.sh → nvidia-smi dmon（並列起動） -->
-        <mxCell id="arrow_b" value="dmon 並列起動&lt;br&gt;(nvidia-smi dmon &amp;)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="run_bench" target="dmon_tool" parent="1">
+        <mxCell id="arrow_g" edge="1" parent="1" source="benchmark" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" target="dmon_stats" value="nvidia-smi-dmon.log (SSM tar取得後 Mac で集計)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="660" y="422" />
-              <mxPoint x="660" y="436" />
+              <mxPoint x="559" y="475" />
+              <mxPoint x="146" y="475" />
+              <mxPoint x="146" y="670" />
             </Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- C: benchmark_rsl_rl.py → Isaac Lab コア -->
-        <mxCell id="arrow_c" value="gym.make() / ManagerBasedRLEnv" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="benchmark" target="isaaclab_core" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="divider1" edge="1" parent="1" style="endArrow=none;html=1;strokeColor=#BBBBBB;strokeWidth=1;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="457" y="65" as="sourcePoint" />
+            <mxPoint x="457" y="821" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <!-- H: Isaac Lab コア ↔ 外部依存（両方向破線） -->
-        <mxCell id="arrow_h" value="Gymnasium API / RL API" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#777777;dashed=1;fontSize=9;endArrow=open;startArrow=open;startFill=0;endFill=0;" edge="1" source="isaaclab_core" target="ext_deps" parent="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="divider2" edge="1" parent="1" style="endArrow=none;html=1;strokeColor=#BBBBBB;strokeWidth=1;dashed=1;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="874" y="65" as="sourcePoint" />
+            <mxPoint x="874" y="821" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
-        <!-- D: Isaac Lab コア → Isaac Sim -->
-        <mxCell id="arrow_d" value="Python API / PhysX GPU / USD Fabric 呼び出し" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="isaaclab_core" target="isaac_sim" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- E: Isaac Sim → GPU -->
-        <mxCell id="arrow_e" value="CUDA / ドライバー呼び出し" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="isaac_sim" target="gpu_layer" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- dmon_tool → GPU（nvidia-smiがGPUを直接サンプリング） -->
-        <mxCell id="arrow_dmon_gpu" value="GPU直接サンプリング (NVML経由)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;fontSize=9;" edge="1" source="dmon_tool" target="gpu_layer" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- F: benchmark_rsl_rl.py → run_bench.sh（stdout→CSV返却、破線） -->
-        <mxCell id="arrow_f" value="stdout → bench.log → grep → summary.csv" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" edge="1" source="benchmark" target="run_bench" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- G: dmon_tool → dmon_stats.py（.log経由、破線・折り返し） -->
-        <mxCell id="arrow_g" value="nvidia-smi-dmon.log (SSM tar取得後 Mac で集計)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" edge="1" source="dmon_tool" target="dmon_stats" parent="1">
+        <mxCell id="9-ytGL_TqZY0vP-9F31l-3" edge="1" parent="1" source="dmon_tool" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" target="benchmark" value="">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="658" y="476" />
-              <mxPoint x="150" y="476" />
-              <mxPoint x="150" y="705" />
+              <mxPoint x="978" y="398" />
             </Array>
+            <mxPoint x="931" y="331" as="sourcePoint" />
+            <mxPoint x="442" y="670" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-
-        <!-- run_bench.sh → orchestrate.sh（summary.csv を tar で返却、破線） -->
-        <mxCell id="arrow_return" value="tar.gz 結果返却 (SSM経由) → results/&lt;tag&gt;/" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;strokeColor=#999999;dashed=1;fontSize=9;endArrow=open;endFill=0;" edge="1" source="run_bench" target="orchestrate" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="8" y="422" />
-              <mxPoint x="8" y="326" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="benchmark" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7FB069;strokeColor=#5A8A47;fontColor=#ffffff;fontSize=10;align=left;verticalAlign=middle;spacingLeft=5;" value="&lt;b&gt;scripts/benchmarks/benchmark_rsl_rl.py&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#FFEE99&quot;&gt;★ ボトルネック調査の着地点&lt;/font&gt;&lt;br&gt;計測: App Launch Time / Total Start Time&lt;br&gt;　　  Mean Total FPS / Mean Collection FPS / Max Rewards&lt;br&gt;stdout: &amp;quot;&amp;lt;key&amp;gt;: &amp;lt;value&amp;gt; ms&amp;quot; 形式 → run_bench.sh が grep 解析" vertex="1">
+          <mxGeometry height="86" width="390" x="462" y="355" as="geometry" />
         </mxCell>
-
-        <!-- 列区切り線 -->
-        <mxCell id="divider1" value="" style="endArrow=none;html=1;strokeColor=#BBBBBB;strokeWidth=1;dashed=1;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="255" y="100" as="sourcePoint" />
-            <mxPoint x="255" y="856" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="divider2" value="" style="endArrow=none;html=1;strokeColor=#BBBBBB;strokeWidth=1;dashed=1;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="672" y="100" as="sourcePoint" />
-            <mxPoint x="672" y="856" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-
       </root>
     </mxGraphModel>
   </diagram>
