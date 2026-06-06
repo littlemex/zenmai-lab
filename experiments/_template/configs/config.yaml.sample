@@ -1,0 +1,4 @@
+# Sample config. Override per experiment.
+seed: 42
+num_envs: 4096
+max_iterations: 100

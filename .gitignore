@@ -1,0 +1,28 @@
+# secrets / per-experiment env
+push.env
+*.env
+!*.env.sample
+
+# results: large files go to S3, not git
+**/results/**/*.mp4
+**/results/**/*.png
+**/results/**/*.jpg
+**/results/**/*.pt
+**/results/**/*.ckpt
+**/results/**/*.safetensors
+**/results/**/*.zip
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.python-version
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# build artifacts
+.docker-build-cache/
