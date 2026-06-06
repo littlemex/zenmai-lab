@@ -208,9 +208,11 @@ for env_count in "${SWEEP[@]}"; do
     "$REMOTE_DIR" "$TAG" "$TAG" "$TAG")
   CID=$(ssm_send "$TARBALL_CMD")
   ssm_wait "$CID" 120 >/dev/null
-  ssm_get "$CID" | tail -1 | tr -d '\n' | base64 -d > "$LOCAL_OUT/${TAG}.tar.gz"
-  ( cd "$LOCAL_OUT" && tar -xzf "${TAG}.tar.gz" -C . && rm -f "${TAG}.tar.gz" )
-  echo "[orchestrate] saved to $LOCAL_OUT"
+  TAG_DIR="$LOCAL_OUT/$TAG"
+  mkdir -p "$TAG_DIR"
+  ssm_get "$CID" | tail -1 | tr -d '\n' | base64 -d > "$TAG_DIR/_archive.tar.gz"
+  ( cd "$TAG_DIR" && tar -xzf _archive.tar.gz && rm -f _archive.tar.gz )
+  echo "[orchestrate] saved to $TAG_DIR"
 done
 
 # --- 5. Local dmon analysis ------------------------------------------------
@@ -218,7 +220,7 @@ done
 if command -v python3 >/dev/null; then
   echo
   echo "=== dmon summary (markdown) ==="
-  python3 scripts/dmon_stats.py --format md "$LOCAL_OUT"/run-seed*/nvidia-smi-dmon.log || true
+  python3 scripts/dmon_stats.py --format md "$LOCAL_OUT"/*/run-seed*/nvidia-smi-dmon.log || true
 fi
 
 echo
