@@ -22,10 +22,12 @@ usage() {
 Usage: bash orchestrate.sh <profile>
 
 Profiles:
-  cartpole        Isaac-Cartpole-v0,         5 seeds, 100 iters, num_envs=4096
-  g1              Isaac-Velocity-Rough-G1-v0, 5 seeds, 100 iters, num_envs=4096
-  g1-quick        same task, 1 seed,         50 iters, num_envs=4096
-  g1-num-envs     num_envs sweep {4096,8192,16384}, 1 seed, 100 iters
+  cartpole              Isaac-Cartpole-v0,         5 seeds, 100 iters, num_envs=4096
+  g1                    Isaac-Velocity-Rough-G1-v0, 5 seeds, 100 iters, num_envs=4096
+  g1-quick              same task, 1 seed,         50 iters, num_envs=4096
+  g1-num-envs           num_envs sweep {4096,8192,16384}, 1 seed, 100 iters
+  g1-flat               Isaac-Velocity-Flat-G1-v0, 3 seeds, 100 iters, num_envs=4096
+  g1-num-envs-extended  num_envs sweep {24576,32768}, 1 seed, 50 iters (OOM hunt)
 
 Override profile presets via env vars (e.g. NUM_ENVS=2048 SEEDS="42 7").
 Required in ssm.env: INSTANCE_ID, AWS_REGION.
@@ -95,6 +97,19 @@ case "$PROFILE" in
     SEEDS="${SEEDS:-42}"
     ITERS="${ITERS:-100}"
     SWEEP=(${NUM_ENVS_SWEEP:-4096 8192 16384})
+    ;;
+  g1-flat)
+    TASK="Isaac-Velocity-Flat-G1-v0"
+    SEEDS="${SEEDS:-42 123 456}"
+    ITERS="${ITERS:-100}"
+    NUM_ENVS="${NUM_ENVS:-4096}"
+    SWEEP=("$NUM_ENVS")
+    ;;
+  g1-num-envs-extended)
+    TASK="Isaac-Velocity-Rough-G1-v0"
+    SEEDS="${SEEDS:-42}"
+    ITERS="${ITERS:-50}"
+    SWEEP=(${NUM_ENVS_SWEEP:-24576 32768})
     ;;
   *)
     echo "unknown profile: $PROFILE" >&2

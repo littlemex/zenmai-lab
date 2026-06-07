@@ -62,6 +62,8 @@ class Stats:
     pwr_max: int
     mclk_avg: float
     pclk_avg: float
+    fb_avg: float
+    fb_max: int
 
 
 def percentile(values: list[int], p: float) -> int:
@@ -78,6 +80,7 @@ def parse_file(path: str) -> Stats | None:
     pwr: list[int] = []
     mclk: list[int] = []
     pclk: list[int] = []
+    fb: list[int] = []
     with open(path) as fp:
         for line in fp:
             stripped = line.lstrip()
@@ -95,6 +98,10 @@ def parse_file(path: str) -> Stats | None:
                 pwr.append(int(parts[9]))
                 mclk.append(int(parts[12]))
                 pclk.append(int(parts[13]))
+                # fb (framebuffer / VRAM in MB) is col 14, may be missing on
+                # very old drivers; skip silently when it is.
+                if len(parts) > 14:
+                    fb.append(int(parts[14]))
             except (ValueError, IndexError):
                 continue
 
@@ -115,6 +122,8 @@ def parse_file(path: str) -> Stats | None:
         pwr_max=max(pwr),
         mclk_avg=statistics.mean(mclk),
         pclk_avg=statistics.mean(pclk),
+        fb_avg=statistics.mean(fb) if fb else 0.0,
+        fb_max=max(fb) if fb else 0,
     )
 
 
@@ -127,34 +136,36 @@ def emit_text(stats: list[Stats]) -> None:
         print(f"  mem_avg={s.mem_avg:.1f}% mem_max={s.mem_max}%")
         print(f"  pwr_avg={s.pwr_avg:.0f}W pwr_max={s.pwr_max}W")
         print(f"  mclk_avg={s.mclk_avg:.0f}MHz pclk_avg={s.pclk_avg:.0f}MHz")
+        print(f"  fb_avg={s.fb_avg:.0f}MB fb_max={s.fb_max}MB")
 
 
 def emit_csv(stats: list[Stats]) -> None:
     print(
         "name,samples,sm_avg,sm_p95,sm_max,mem_avg,mem_max,"
-        "pwr_avg,pwr_max,mclk_avg,pclk_avg"
+        "pwr_avg,pwr_max,mclk_avg,pclk_avg,fb_avg_mb,fb_max_mb"
     )
     for s in stats:
         print(
             f"{s.name},{s.n},{s.sm_avg:.1f},{s.sm_p95},{s.sm_max},"
             f"{s.mem_avg:.1f},{s.mem_max},{s.pwr_avg:.0f},{s.pwr_max},"
-            f"{s.mclk_avg:.0f},{s.pclk_avg:.0f}"
+            f"{s.mclk_avg:.0f},{s.pclk_avg:.0f},{s.fb_avg:.0f},{s.fb_max}"
         )
 
 
 def emit_md(stats: list[Stats]) -> None:
     print(
         "| run | n | SM avg | SM p95 | SM max | MEM avg | MEM max | "
-        "PWR avg | PWR max | mclk | pclk |"
+        "PWR avg | PWR max | mclk | pclk | fb avg | fb max |"
     )
     print(
-        "|---|---|---|---|---|---|---|---|---|---|---|"
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|"
     )
     for s in stats:
         print(
             f"| {s.name} | {s.n} | {s.sm_avg:.1f}% | {s.sm_p95}% | {s.sm_max}% "
             f"| {s.mem_avg:.1f}% | {s.mem_max}% | {s.pwr_avg:.0f} W | "
-            f"{s.pwr_max} W | {s.mclk_avg:.0f} MHz | {s.pclk_avg:.0f} MHz |"
+            f"{s.pwr_max} W | {s.mclk_avg:.0f} MHz | {s.pclk_avg:.0f} MHz "
+            f"| {s.fb_avg:.0f} MB | {s.fb_max} MB |"
         )
 
 
