@@ -47,19 +47,26 @@ END = "# >>> zenmai-ablation END <<<"
 PATCHES = {
     "none": "",
     "contact-scope-ankle": textwrap.dedent("""
+        # Narrow the contact sensor to just the bodies actually consumed by
+        # rewards/terminations: torso (used by base_contact termination) +
+        # ankle roll links (used by feet_air_time / feet_slide rewards).
+        # All other bodies in G1 MINIMAL (23 links total) had PhysxContactReportAPI
+        # applied unnecessarily, costing GPU memory bandwidth at high num_envs.
         from isaaclab.sensors.contact_sensor import ContactSensorCfg
         self.scene.contact_forces = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link",
+            prim_path="{ENV_REGEX_NS}/Robot/(torso_link|.*_ankle_roll_link)",
             history_length=3,
             track_air_time=True,
         )
     """),
     "solver-iter-half": textwrap.dedent("""
+        # G1_MINIMAL_CFG is already imported at module top of rough_env_cfg.py.
+        # Re-importing inside __post_init__ would cause UnboundLocalError on
+        # the original assignment because Python treats the name as local.
+        # We mutate the existing self.scene.robot.spawn.articulation_props.
         from isaaclab.sim.schemas.schemas_cfg import ArticulationRootPropertiesCfg
-        from isaaclab_assets.robots.unitree import G1_MINIMAL_CFG
-        self.scene.robot = G1_MINIMAL_CFG.replace(
-            prim_path="{ENV_REGEX_NS}/Robot",
-            spawn=G1_MINIMAL_CFG.spawn.replace(
+        self.scene.robot = self.scene.robot.replace(
+            spawn=self.scene.robot.spawn.replace(
                 articulation_props=ArticulationRootPropertiesCfg(
                     solver_position_iteration_count=4,
                     solver_velocity_iteration_count=1,
@@ -85,17 +92,16 @@ PATCHES = {
     """),
     "combined": (
         textwrap.dedent("""
+            # See solver-iter-half / contact-scope-ankle for individual rationale.
             from isaaclab.sensors.contact_sensor import ContactSensorCfg
             self.scene.contact_forces = ContactSensorCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link",
+                prim_path="{ENV_REGEX_NS}/Robot/(torso_link|.*_ankle_roll_link)",
                 history_length=3,
                 track_air_time=True,
             )
             from isaaclab.sim.schemas.schemas_cfg import ArticulationRootPropertiesCfg
-            from isaaclab_assets.robots.unitree import G1_MINIMAL_CFG
-            self.scene.robot = G1_MINIMAL_CFG.replace(
-                prim_path="{ENV_REGEX_NS}/Robot",
-                spawn=G1_MINIMAL_CFG.spawn.replace(
+            self.scene.robot = self.scene.robot.replace(
+                spawn=self.scene.robot.spawn.replace(
                     articulation_props=ArticulationRootPropertiesCfg(
                         solver_position_iteration_count=4,
                         solver_velocity_iteration_count=1,

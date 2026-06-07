@@ -23,3 +23,7 @@ __pycache__/
 
 # build artifacts
 .docker-build-cache/
+
+# nsys profile reports (huge; only the derived CSV / txt summaries are committed)
+*.nsys-rep
+*.sqlite
