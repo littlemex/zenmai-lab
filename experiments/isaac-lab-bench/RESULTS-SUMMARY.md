@@ -41,29 +41,60 @@
 |-------------|------|------|------:|---------------:|-------------------:|
 | (default) | パッチなし | 4xl | 1 | 112,503 | (基準) |
 | contact-scope-ankle | contact_forces を torso + ankle (3 リンク) のみに | 4xl | 1 | 112,955 | **+0.4%** (誤差) |
-| solver-iter-half | G1 articulation の solver 反復を半減 | 4xl | 3 | _retry running_ | _ |
-| **height-scan-halffreq** | update_period を 2× | 2xl | 2 | **113,829** | **+1.2%** |
-| **height-scan-lowres** | resolution 0.10→0.15, size 1.6×1.0→1.0×0.6 | 2xl | 2 | **115,116** | **+2.3%** |
+| **solver-iter-half** | G1 articulation の solver 反復を半減 (pos 8→4, vel 4→1) | 4xl | 3 | **148,240 ± 503** | **+31.7%** ★ 本命 |
+| height-scan-halffreq | update_period を 2× | 2xl | 2 | 113,829 | +1.2% |
+| height-scan-lowres | resolution 0.10→0.15, size 1.6×1.0→1.0×0.6 | 2xl | 2 | 115,116 | +2.3% |
 | height-scan-none (G1-Rough での) | height_scanner=None + plane terrain | 2xl | 2 | エラー | observation が height_scan を参照していて Rough cfg では設定不整合 |
 | **combined** | contact-scope + solver-iter + height-scan-halffreq | 4xl | 3 | _retry running_ | _ |
 
-**観察 (現時点)**:
-- `contact_forces` の prim_path 絞り込み（23 → 3 リンク）は **fps 変化なし** (+0.4%)。「センサー個数」ベースの仮説は外れる。GPU 帯域への寄与は無視できる。
-- `height_scanner` の頻度・解像度を半減すると **+1〜2% 程度の改善**。raycast コストはあるが思ったほど大きくない。
-- `height_scanner=None` を Rough cfg に当てても動かない（observation 側に依存がある）。Flat タスクへ切り替えるのが正しい。
-- G1-Flat (Rough → Flat) は section 3 で **+18.3%** を実測 = ある意味 height-scan-none + raycaster 撤去 + terrain 単純化の合算効果。
+**観察**:
+- ★ **`solver-iter-half` が圧倒的勝者: +31.7%**。Section 5 (nsys) のとおり、PhysX articulation TGS solver が GPU 時間の **48%** を占めており、その solver 反復回数を半減すれば直接 fps に反映される。学習品質 (max_rewards) は default と差なし。
+- `contact_forces` の prim_path 絞り込みは **fps 変化なし** (+0.4%)。「センサー個数」ベースの仮説は外れた。Section 5 の kernel ランキングでも `convexTrimeshNarrowphase` は 2.4% でしかない。
+- `height_scanner` 系は **+1〜2% 程度**。raycast コストはあるが Section 5 で確認済みの 3.3% と整合。
+- `height_scanner=None` を Rough cfg に当てても動かない (observation 側に依存)。Flat タスクへ切り替えるのが正しく、Section 3 で **+18.3%** 実測。
 
-## 5. 推奨優先度（実測完了後に確定）
+## 5. nsys プロファイル: GPU 時間内訳 (g6e.2xl, n=4096, 30 iters)
 
-実測で fps 改善が確認できた順に番号を振る。
+`scripts/profile_nsys.sh` 経由で全 30 iter を `nsys profile --trace=cuda,nvtx` でラップ。`scripts/benchmarks/benchmark_rsl_rl.py` の生実行 (71k fps) より低めの fps_total = 56,512 になるが nsys オーバーヘッド込み。重要なのは絶対値ではなく **カーネル時間配分**。
 
-1. ⏳ num_envs を上げる (4096→16384 で実測 +56%)
-2. ⏳ contact-scope-ankle (実験 4)
-3. ⏳ height-scan の調整 (実験 6)
-4. ⏳ solver-iter-half (実験 4)
-5. ⏳ combined stack (実験 7)
+### Top 10 GPU カーネル (累積時間 %)
 
-## 6. 残課題
+| % | カーネル | カテゴリ |
+|---:|---------|----------|
+| **39.1** | `artiSolveInternalConstraintsTGS1T` | PhysX TGS solver (articulation 内部制約) |
+| **9.0** | `stepArticulation1TTGS` | PhysX articulation step |
+| 3.3 | `raycast_mesh_kernel` | Warp raycast (height_scan) |
+| 3.2 | `at::native::index_kernel` | PyTorch indexing |
+| 2.5 | `updateBodiesLaunch_Part2` | PhysX body update |
+| 2.4 | `convexTrimeshNarrowphase` | PhysX 接触ナローフェーズ |
+| 2.4 | `computeUnconstrainedSpatialInertiaLaunchPartial1T` | PhysX |
+| 2.1 | `index_put_kernel` | PyTorch |
+| 2.0 | `elu_backward_kernel` | PyTorch (NN backward) |
+| 1.9 | `computeUnconstrainedAccelerationsLaunch1T` | PhysX |
+
+**観察**:
+- **PhysX articulation 系 (1, 2, 5, 7, 10) で約 55%**。残り は別の PhysX カーネル群と PyTorch RL 計算。
+- Raycast 単独は **3.3%** だけ。height-scan ablation で +1〜2% の効果しか出なかった事実と完全に整合。
+- PyTorch 関連 (index, elu_backward, etc.) で **約 10%**。RL ネットワークサイズ削減や `num_mini_batches=2` などで触れる範囲。
+
+`results/g1-nsys-test5/profile/42/kernels.csv` が完全なリスト (top 数百カーネル)。`gpu-gaps.txt` も同ディレクトリ。
+
+## 6. 推奨優先度 (実測ベース、効果順)
+
+| 順 | 推奨 | 実測効果 | リスク・条件 |
+|---:|------|---------|-------------|
+| **1** | **`solver-iter-half`** (G1 articulation の solver 反復を半減) | **+31.7%** | 学習収束への影響を要確認。本ベンチでは max_rewards に有意な変化なし。試すコストが低くリターン大 |
+| **2** | **num_envs を 16384 へ** (4096 から増やす) | **+56% (vs 4096)** | VRAM 33% 利用、余裕あり。num_envs > 16384 はリターン逓減で +5% のみ |
+| 3 | G1-Rough → G1-Flat (rough 不要なら) | +18% (4096) | 学習要件次第。rough 地形が要件なら採用不可 |
+| 4 | num_envs を 24576-32768 へ | +5% (vs 16384) | 帯域飽和で逓減。wall_clock も増える |
+| 5 | `height-scan-halffreq` / `lowres` | +1〜2% | 観測周波数 / 精度低下のトレードオフ |
+| 6 | `combined` | _測定中_ | 加算性が確認できれば +33% 程度の見込み |
+| - | `contact-scope-ankle` | +0.4% (誤差) | 推奨しない。実装コスト > 効果 |
+| - | g6e.2xl → g6e.4xl (vCPU 倍) | +0.6% (誤差) | CPU はボトルネックでない。インスタンスを増やすなら GPU 側で |
+
+**最大の発見**: nsys プロファイルが「**PhysX articulation solver が GPU 時間 48% を占める**」と教えてくれて、`solver-iter-half` を狙い打ちで効かせて **+31.7%** を実測した。「センサー個数」「num_envs スケーリング」のような直感的な仮説より、**実測ホットスポットからの逆算**が圧倒的に当たった。
+
+## 7. 残課題
 
 - [ ] g7e.2xlarge (Blackwell + GDDR7 1597 GB/s) で num_envs=16384 ベンチ
 - [ ] g6e.12xlarge (4× L40S) で `--distributed` マルチGPU
