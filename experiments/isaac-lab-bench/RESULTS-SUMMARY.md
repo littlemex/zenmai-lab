@@ -45,7 +45,7 @@
 | height-scan-halffreq | update_period を 2× | 2xl | 2 | 113,829 | +1.2% |
 | height-scan-lowres | resolution 0.10→0.15, size 1.6×1.0→1.0×0.6 | 2xl | 2 | 115,116 | +2.3% |
 | height-scan-none (G1-Rough での) | height_scanner=None + plane terrain | 2xl | 2 | エラー | observation が height_scan を参照していて Rough cfg では設定不整合 |
-| **combined** | contact-scope + solver-iter + height-scan-halffreq | 4xl | 3 | _retry running_ | _ |
+| **combined** | contact-scope + solver-iter + height-scan-halffreq | 4xl | 3 | **151,512 ± 552** | **+34.7%** ★ 最大 |
 
 **観察**:
 - ★ **`solver-iter-half` が圧倒的勝者: +31.7%**。Section 5 (nsys) のとおり、PhysX articulation TGS solver が GPU 時間の **48%** を占めており、その solver 反復回数を半減すれば直接 fps に反映される。学習品質 (max_rewards) は default と差なし。
@@ -88,7 +88,7 @@
 | 3 | G1-Rough → G1-Flat (rough 不要なら) | +18% (4096) | 学習要件次第。rough 地形が要件なら採用不可 |
 | 4 | num_envs を 24576-32768 へ | +5% (vs 16384) | 帯域飽和で逓減。wall_clock も増える |
 | 5 | `height-scan-halffreq` / `lowres` | +1〜2% | 観測周波数 / 精度低下のトレードオフ |
-| 6 | `combined` | _測定中_ | 加算性が確認できれば +33% 程度の見込み |
+| 6 | `combined` (1 + 5 + contact-scope) | **+34.7%** (vs default 16384) / **+112%** (vs default 4096) | 加算的に効いた。デフォルト 4096 に対して **fps が 2.12 倍**。30h → 約 14h |
 | - | `contact-scope-ankle` | +0.4% (誤差) | 推奨しない。実装コスト > 効果 |
 | - | g6e.2xl → g6e.4xl (vCPU 倍) | +0.6% (誤差) | CPU はボトルネックでない。インスタンスを増やすなら GPU 側で |
 
