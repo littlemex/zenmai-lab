@@ -34,6 +34,8 @@ isaac-lab-bench/
 │   ├── check_local.sh              DCV モード用の pre-flight チェック
 │   ├── diagnose.sh                 顧客向け 30 秒セルフ診断 (環境差を取る)
 │   ├── profile_nsys.sh             Nsight Systems で 1 ラン分のタイムラインを取る
+│   ├── profile_pyspy.sh            py-spy で Python メインスレッドのフレームグラフを取る
+│   ├── pyspy_tree.py               SVG フレームグラフを md/text ツリーに変換
 │   └── ablations/
 │       ├── apply_ablation.py       命名された ablation を冪等にパッチ
 │       └── run_one.sh              SSM 経由 1 コマンドで ablation 実行
@@ -123,6 +125,22 @@ bash scripts/profile_nsys.sh Isaac-Velocity-Rough-G1-v0 g1-prof "42" 30 4096
 ```
 
 `.nsys-rep` は数百 MB になり gitignore 対象。CSV / TXT サマリのみコミットする。
+
+### py-spy フレームグラフ
+GPU 待ち中の Python メインスレッドが何で時間を使っているか可視化する。`scripts/profile_pyspy.sh` が benchmark_rsl_rl.py を py-spy でアタッチし、フレームグラフ SVG とテキストダンプを生成する。
+
+```bash
+# EC2 上で。sudo 権限が必要 (ptrace_scope=1 のため)
+bash scripts/profile_pyspy.sh Isaac-Velocity-Rough-G1-v0 g1-pyspy "42" 100 16384
+```
+
+出力先: `results/pyspy/<tag>/run-seed*/pyspy.svg` と `pyspy-dump.txt`
+
+SVG をローカルで解析する場合:
+
+```bash
+python3 scripts/pyspy_tree.py <path-to-svg> --format md --min-pct 1.0 --max-depth 8
+```
 
 ### 顧客環境セルフ診断
 `scripts/diagnose.sh` は EC2 上で実行する read-only の <30 秒スクリプト。GPU・CPU・IsaacLab・conda・PyTorch・指定タスクの主要 cfg をダンプする。顧客が自環境で実行 → 出力をペーストしてもらえれば、こちらの参照環境との差分が即分かる。
