@@ -8,6 +8,9 @@ push.env
 !**/results/**/
 !**/results/**/*.csv
 !**/results/**/.gitkeep
+# py-spy decoded artifacts are small Markdown / SVG that we ship to customers
+!**/results/pyspy/*.svg
+!**/results/pyspy/*.tree.md
 
 # python
 __pycache__/
