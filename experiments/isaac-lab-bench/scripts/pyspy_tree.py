@@ -1,23 +1,40 @@
 #!/usr/bin/env python3
-"""py-spy / inferno SVG flamegraph -> Markdown tree ビューア
+"""py-spy / inferno SVG flamegraph and speedscope JSON -> Markdown tree viewer
 
-SVG フレームグラフはブラウザなしでは読めないため、CLI で Markdown ツリーとして
-出力し、そのままドキュメントやチャットに貼り付けられるようにする。
+SVG flamegraphs are hard to read without a browser, so this tool renders them
+as a CLI Markdown tree that can be pasted directly into documents or chats.
 
-対応 SVG 形式: inferno が生成する inverted=true (icicle) フレームグラフ。
-各フレームは <g><title>NAME (file:line) (N samples, X.YZ%)</title><rect ... fg:x="X" fg:w="W"/></g>
-の形式。
+Supported input formats (auto-detected by file extension):
+  .svg              -- inferno inverted (icicle) flamegraph
+  .json             -- speedscope JSON profile (including .speedscope.json)
 
-出力モード (--format):
-  md   (デフォルト) : Markdown ネスト箇条書きツリー + リーフテーブル
-  text : インデント ASCII ツリー (ボックス描画文字なし)
-  json : 生ツリーを JSON で出力 (ネスト dict)
+Supported SVG format: inferno inverted=true (icicle) flamegraph.
+Each frame is:
+  <g><title>NAME (file:line) (N samples, X.YZ%)</title><rect ... fg:x="X" fg:w="W"/></g>
 
-使用例
-------
+Speedscope JSON format reference:
+  Top level: {"$schema":"...", "shared":{"frames":[FrameInfo,...]},
+              "profiles":[Profile,...], "activeProfileIndex":int}
+  FrameInfo: {"name":str, "file":Optional[str], "line":Optional[int]}
+  Profile types:
+    sampled: {"type":"sampled","samples":[[frame_idx,...],...],
+              "weights":[num,...], ...}
+    evented: {"type":"evented","events":[{"type":"O"|"C","frame":idx,"at":num},...]}
+
+Output modes (--format):
+  md   (default) : Markdown nested bullet tree + frames table
+  text           : indented ASCII tree (no box-drawing characters)
+  json           : raw tree as JSON (nested dict)
+
+Usage examples
+--------------
   python pyspy_tree.py results/pyspy/pyspy-4xl-full.svg
   python pyspy_tree.py results/pyspy/pyspy-4xl-full.svg --format md --min-pct 1.0 --max-depth 8 --max-children 6 --top-leaves 30
   python pyspy_tree.py results/pyspy/pyspy-4xl-full.svg --format json | python -m json.tool | head -60
+
+  # Speedscope JSON
+  python pyspy_tree.py profile.speedscope.json --format md --min-pct 1.0 --top-leaves 15
+  python pyspy_tree.py profile.json --format text
 """
 
 import argparse
@@ -54,7 +71,7 @@ def _unescape_html(s: str) -> str:
 
 
 def parse_svg(path: str) -> list[dict]:
-    """SVG ファイルからフレームリストを返す (x, w, y, name, location, samples, pct)."""
+    """Return frame list from SVG (x, w, y, name, location, samples, pct)."""
     with open(path, encoding="utf-8") as fh:
         content = fh.read()
 
@@ -101,15 +118,23 @@ def parse_svg(path: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# 2. Build tree
+# 2. Build tree (SVG path)
 # ---------------------------------------------------------------------------
+
+def annotate_self(node: dict) -> None:
+    """Compute _self for every node: samples minus sum of direct children."""
+    children_total = sum(c["samples"] for c in node["children"])
+    node["_self"] = max(0, node["samples"] - children_total)
+    for c in node["children"]:
+        annotate_self(c)
+
 
 def build_tree(frames: list[dict]) -> dict:
     """
-    parent 検出: F2 の親 = y < F2.y かつ [F2.x, F2.x+F2.w] が親の範囲内に含まれる
-    フレームのうち y が最大のもの (= 最も近い祖先)。
+    Parent detection: F2's parent = the frame with y < F2.y whose x-range
+    contains [F2.x, F2.x+F2.w], with the largest y (closest ancestor).
 
-    returns root node dict with children list.
+    Returns root node dict with children list.
     """
     # Sort by y asc, x asc
     sorted_frames = sorted(frames, key=lambda f: (f["y"], f["x"]))
@@ -169,24 +194,178 @@ def build_tree(frames: list[dict]) -> dict:
         }
 
     sort_children(root)
+    annotate_self(root)
     return root
 
 
 # ---------------------------------------------------------------------------
-# 3. Collect leaves
+# 3. Parse speedscope JSON
 # ---------------------------------------------------------------------------
 
-def collect_leaves(node: dict) -> list[dict]:
-    if not node["children"]:
-        return [node]
-    leaves = []
+def parse_speedscope(path: str) -> dict:
+    """Parse a speedscope JSON profile and return a tree in the same shape as
+    build_tree(parse_svg(...)):
+      {"name": str, "location": str, "samples": num, "pct": float,
+       "_self": num, "children": [...]}
+    """
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    frames_info = data.get("shared", {}).get("frames", [])
+    profiles = data.get("profiles", [])
+    if not profiles:
+        raise ValueError("speedscope JSON has no profiles")
+
+    active_idx = data.get("activeProfileIndex", 0) or 0
+    profile = profiles[active_idx]
+
+    ptype = profile.get("type", "sampled")
+
+    def frame_name(idx: int) -> tuple[str, str]:
+        """Return (name, location) for a frame index."""
+        fi = frames_info[idx] if idx < len(frames_info) else {}
+        name = fi.get("name", f"frame_{idx}")
+        file_ = fi.get("file")
+        line = fi.get("line")
+        if file_ and line is not None:
+            location = f"{file_}:{line}"
+        elif file_:
+            location = file_
+        else:
+            location = ""
+        return name, location
+
+    # Each node in our tree: {name, location, samples, children, _self}
+    # We build it as a dict keyed by path tuple for fast lookup.
+
+    if ptype == "sampled":
+        samples_list = profile.get("samples", [])
+        weights = profile.get("weights", [])
+        total_weight = sum(weights) if weights else len(samples_list)
+
+        # Build call tree incrementally
+        # Node structure: {"name", "location", "samples", "children": {key: node}}
+        # We use a dict-of-children keyed by frame_idx for O(1) lookup.
+        root_node: dict = {
+            "name": "all",
+            "location": "",
+            "samples": total_weight,
+            "children": {},
+        }
+
+        for i, stack in enumerate(samples_list):
+            w = weights[i] if i < len(weights) else 1
+            current = root_node
+            for frame_idx in stack:  # root -> leaf order
+                key = frame_idx
+                if key not in current["children"]:
+                    n2, loc = frame_name(frame_idx)
+                    current["children"][key] = {
+                        "name": n2,
+                        "location": loc,
+                        "samples": 0,
+                        "children": {},
+                    }
+                child_node = current["children"][key]
+                child_node["samples"] += w
+                current = child_node
+
+    elif ptype == "evented":
+        events = profile.get("events", [])
+        start_val = profile.get("startValue", 0)
+        end_val = profile.get("endValue", 0)
+        total_weight = end_val - start_val
+
+        root_node = {
+            "name": "all",
+            "location": "",
+            "samples": total_weight,
+            "children": {},
+        }
+
+        # Stack of (frame_idx, node, enter_time)
+        stack: list[tuple[int, dict, float]] = []
+        current_node = root_node
+
+        for ev in events:
+            ev_type = ev.get("type")
+            fidx = ev.get("frame", 0)
+            at = ev.get("at", 0)
+
+            if ev_type == "O":
+                key = fidx
+                if key not in current_node["children"]:
+                    n2, loc = frame_name(fidx)
+                    current_node["children"][key] = {
+                        "name": n2,
+                        "location": loc,
+                        "samples": 0,
+                        "children": {},
+                    }
+                child_node = current_node["children"][key]
+                stack.append((fidx, current_node, at))
+                current_node = child_node
+
+            elif ev_type == "C":
+                if stack:
+                    fidx_open, parent_node, enter_at = stack.pop()
+                    duration = at - enter_at
+                    current_node["samples"] += duration
+                    current_node = parent_node
+    else:
+        raise ValueError(f"Unknown speedscope profile type: {ptype!r}")
+
+    def convert(node: dict) -> dict:
+        """Recursively convert internal tree format to final output format."""
+        children = [convert(v) for v in node["children"].values()]
+        children.sort(key=lambda c: c["samples"], reverse=True)
+        total_samples = node["samples"]
+        root_s = root_node["samples"] if root_node["samples"] else 1
+        return {
+            "name": node["name"],
+            "location": node["location"],
+            "samples": total_samples,
+            "pct": 100.0 * total_samples / root_s,
+            "_self": 0,  # will be filled by annotate_self
+            "children": children,
+        }
+
+    root = convert(root_node)
+    root["pct"] = 100.0
+    annotate_self(root)
+    return root
+
+
+# ---------------------------------------------------------------------------
+# 4. Dispatch: auto-detect input format
+# ---------------------------------------------------------------------------
+
+def parse_input(path: str) -> dict:
+    """Auto-detect input format by extension and return root tree node."""
+    if path.lower().endswith(".json"):
+        return parse_speedscope(path)
+    # Default: SVG
+    frames = parse_svg(path)
+    if not frames:
+        print("ERROR: no frames parsed from SVG", file=sys.stderr)
+        sys.exit(1)
+    return build_tree(frames)
+
+
+# ---------------------------------------------------------------------------
+# 5. Collect all nodes for self-time ranking
+# ---------------------------------------------------------------------------
+
+def collect_all_nodes(node: dict) -> list[dict]:
+    """Return a flat list of all nodes in the tree."""
+    result = [node]
     for child in node["children"]:
-        leaves.extend(collect_leaves(child))
-    return leaves
+        result.extend(collect_all_nodes(child))
+    return result
 
 
 # ---------------------------------------------------------------------------
-# 4. Formatters
+# 6. Formatters
 # ---------------------------------------------------------------------------
 
 def _fmt_node_label(node: dict, root_samples: int) -> str:
@@ -295,19 +474,23 @@ def node_to_dict(node: dict) -> dict:
         "location": node["location"],
         "samples": node["samples"],
         "pct": node["pct"],
+        "_self": node.get("_self", 0),
         "children": [node_to_dict(c) for c in node["children"]],
     }
 
 
 # ---------------------------------------------------------------------------
-# 5. Main
+# 7. Main
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="py-spy / inferno SVG flamegraph -> Markdown/text/JSON tree"
+        description="py-spy SVG flamegraph or speedscope JSON -> Markdown/text/JSON tree"
     )
-    parser.add_argument("svg", help="Path to py-spy/inferno SVG flamegraph")
+    parser.add_argument(
+        "path",
+        help="Path to py-spy/inferno SVG flamegraph or speedscope JSON profile"
+    )
     parser.add_argument(
         "--format", choices=["md", "text", "json"], default="md",
         help="Output format (default: md)"
@@ -326,25 +509,26 @@ def main() -> None:
     )
     parser.add_argument(
         "--top-leaves", type=int, default=30,
-        help="Number of top leaf frames to show in table (default: 30)"
+        help="Number of top frames by self-time to show in table (default: 30)"
     )
     args = parser.parse_args()
 
-    frames = parse_svg(args.svg)
-    if not frames:
-        print("ERROR: no frames parsed from SVG", file=sys.stderr)
-        sys.exit(1)
-
-    root = build_tree(frames)
+    root = parse_input(args.path)
     root_samples = root["samples"]
-    leaves = collect_leaves(root)
-    leaves_sorted = sorted(leaves, key=lambda l: l["samples"], reverse=True)
-    leaf_sum = sum(l["samples"] for l in leaves)
-    # Approximate thread count: if leaf_sum > root_samples, multi-threaded
-    # (py-spy aggregates all threads)
-    thread_hint = max(1, round(leaf_sum / root_samples)) if root_samples else 1
 
-    basename = os.path.basename(args.svg)
+    # Collect all nodes for self-time ranking (not just leaves)
+    all_nodes = collect_all_nodes(root)
+    frames_by_self = sorted(
+        (n for n in all_nodes if n.get("_self", 0) > 0),
+        key=lambda n: n["_self"],
+        reverse=True,
+    )
+
+    # For legacy stats: count how many frames were parsed (SVG path populates
+    # the flat frame list; for JSON we count all nodes instead)
+    total_frame_count = len(all_nodes)
+
+    basename = os.path.basename(args.path)
 
     if args.format == "json":
         print(json.dumps(node_to_dict(root), indent=2))
@@ -353,15 +537,15 @@ def main() -> None:
     if args.format == "text":
         print(f"# py-spy flamegraph: {basename}")
         print(f"  Total samples : {root_samples:,}")
-        print(f"  Frames        : {len(frames):,}")
-        print(f"  Approx threads: {thread_hint}")
+        print(f"  Frames        : {total_frame_count:,}")
         print()
-        print("## Top leaves by self-time")
+        print("## Top frames by self-time")
         top_n = args.top_leaves
-        for leaf in leaves_sorted[:top_n]:
-            pct = 100.0 * leaf["samples"] / root_samples if root_samples else 0.0
-            loc = f"  ({leaf['location']})" if leaf["location"] else ""
-            print(f"  {leaf['samples']:>6} ({pct:5.1f}%)  {leaf['name']}{loc}")
+        for node in frames_by_self[:top_n]:
+            self_samples = node.get("_self", 0)
+            pct = 100.0 * self_samples / root_samples if root_samples else 0.0
+            loc = f"  ({node['location']})" if node["location"] else ""
+            print(f"  {self_samples:>6} ({pct:5.1f}%)  {node['name']}{loc}")
         print()
         print("## Call tree (top branches)")
         lines = render_text_tree(
@@ -376,20 +560,19 @@ def main() -> None:
     lines.append(f"## py-spy flamegraph: {basename}")
     lines.append("")
     lines.append(f"- Total samples: {root_samples:,}")
-    lines.append(f"- Frames: {len(frames):,}")
-    multi_label = " (multi-threaded)" if thread_hint > 1 else ""
-    lines.append(f"- Sampling threads: {thread_hint}{multi_label}")
+    lines.append(f"- Frames: {total_frame_count:,}")
     lines.append("")
 
-    lines.append("### Top leaves by self-time")
+    lines.append("### Top frames by self-time")
     lines.append("")
-    lines.append("| samples | % of root | name | location |")
+    lines.append("| self | % of root | name | location |")
     lines.append("|---:|---:|---|---|")
     top_n = args.top_leaves
-    for leaf in leaves_sorted[:top_n]:
-        pct = 100.0 * leaf["samples"] / root_samples if root_samples else 0.0
-        loc = leaf["location"] if leaf["location"] else "-"
-        lines.append(f"| {leaf['samples']:,} | {pct:.1f}% | {leaf['name']} | {loc} |")
+    for node in frames_by_self[:top_n]:
+        self_samples = node.get("_self", 0)
+        pct = 100.0 * self_samples / root_samples if root_samples else 0.0
+        loc = node["location"] if node["location"] else "-"
+        lines.append(f"| {self_samples:,} | {pct:.1f}% | {node['name']} | {loc} |")
     lines.append("")
 
     lines.append("### Call tree (top branches, depth limited)")

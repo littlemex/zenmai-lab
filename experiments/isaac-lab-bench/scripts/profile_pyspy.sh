@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # profile_pyspy.sh — py-spy フレームグラフプロファイラで benchmark_rsl_rl.py の
-# CPU スタックトレースを SVG フレームグラフとして記録する。
+# CPU スタックトレースを記録する。以下の3種類の出力を生成する:
+#   - SVG フレームグラフ (ブラウザで開く)
+#   - speedscope JSON (https://www.speedscope.app でインタラクティブに解析)
+#   - Markdown ツリー解析 (pyspy_tree.py による自動生成)
+#
+# pyspy_tree.py は本スクリプトと同じ scripts/ ディレクトリに配置すること。
 # run_bench.sh の引数パーシング・ディレクトリ構造をそのまま流用。
 #
 # 動作原理:
@@ -8,11 +13,13 @@
 #   2. benchmark_rsl_rl.py をバックグラウンドで起動し PID を取得
 #   3. Isaac Sim のシェーダコンパイル・キャッシュウォームアップが完了するまで
 #      PYSPY_WARMUP_SEC 秒待機 (この間は py-spy をアタッチしない)
-#   4. sudo py-spy record で PYSPY_DURATION_SEC 秒分のフレームグラフを記録
+#   4. sudo py-spy record で PYSPY_DURATION_SEC 秒分の SVG フレームグラフを記録
 #      (sudo が必要な理由: Linux の ptrace_scope=1 制限を回避するため)
 #   5. py-spy dump でその時点のスタックスナップショットを1回取得
-#   6. ベンチプロセスが自然終了するのを待ち、タイムアウトなら SIGTERM で終了
-#   7. 出力先に README.txt を書き出して実行パラメータを記録
+#   6. sudo py-spy record --format speedscope で同秒数の speedscope JSON を記録
+#   7. ベンチプロセスが自然終了するのを待ち、タイムアウトなら SIGTERM で終了
+#   8. pyspy_tree.py で speedscope JSON (なければ SVG) から Markdown ツリーを生成
+#   9. 出力先に README.txt を書き出して実行パラメータを記録
 #
 # Args:
 #   $1  TASK         e.g. Isaac-Velocity-Rough-G1-v0
@@ -34,10 +41,12 @@
 #   PYSPY_NATIVE        1 なら --native (C 拡張も捕捉、低速) default 0
 #
 # 出力: $DEST_BASE/pyspy/$TAG/run-seed<seed>-<stamp>/
-#   pyspy.svg       — フレームグラフ (ブラウザで開く)
-#   pyspy-dump.txt  — py-spy dump によるスタックスナップショット
-#   bench.log       — benchmark_rsl_rl.py の生 stdout/stderr
-#   README.txt      — 実行パラメータのメモ
+#   pyspy.svg               — SVG フレームグラフ (ブラウザで開く)
+#   pyspy.speedscope.json   — speedscope JSON (https://www.speedscope.app へドロップ)
+#   pyspy.tree.md           — pyspy_tree.py による Markdown ツリー解析
+#   pyspy-dump.txt          — py-spy dump によるスタックスナップショット
+#   bench.log               — benchmark_rsl_rl.py の生 stdout/stderr
+#   README.txt              — 実行パラメータのメモ
 #
 # DO NOT use 'set -u' — Isaac Lab の setup_conda_env.sh が $ZSH_VERSION を
 # 参照するため、bash では set -u でエラーになる。
@@ -81,6 +90,9 @@ if [ -z "$PYSPY_BIN" ]; then
 fi
 echo "[$(date +%H:%M:%S)] [profile_pyspy] using py-spy: $PYSPY_BIN"
 "$PYSPY_BIN" --version 2>/dev/null || true
+
+# pyspy_tree.py は本スクリプトと同じ scripts/ ディレクトリにある。
+PYSPY_TREE="$(dirname "$0")/pyspy_tree.py"
 
 # 出力ルートは $DEST_BASE/pyspy/$TAG に分離することで run_bench.sh の
 # $DEST_BASE/$TAG と衝突しないようにする。
@@ -152,7 +164,7 @@ for SEED in $SEEDS; do
   fi
 
   # ------------------------------------------------------------------
-  # py-spy record — SVG フレームグラフを生成する。
+  # py-spy record (SVG) — SVG フレームグラフを生成する。
   # sudo が必要な理由: Linux の /proc/sys/kernel/yama/ptrace_scope=1 では
   # 子プロセス以外の ptrace を一般ユーザが行えないため。
   # --duration: 指定秒数だけサンプリングして自動終了 (プロセスは生かしたまま)
@@ -160,7 +172,7 @@ for SEED in $SEEDS; do
   # --pid:      アタッチ先の Python PID
   # ------------------------------------------------------------------
   SVG_PATH="$RUN_DIR/pyspy.svg"
-  echo "[$(date +%H:%M:%S)]   py-spy record 開始 (duration=${PYSPY_DURATION_SEC}s, rate=${PYSPY_RATE}Hz) ..."
+  echo "[$(date +%H:%M:%S)]   py-spy record (SVG) 開始 (duration=${PYSPY_DURATION_SEC}s, rate=${PYSPY_RATE}Hz) ..."
   # shellcheck disable=SC2086
   sudo "$PYSPY_BIN" record \
     --pid "$PY_PID" \
@@ -168,13 +180,14 @@ for SEED in $SEEDS; do
     --duration "$PYSPY_DURATION_SEC" \
     --rate "$PYSPY_RATE" \
     $PYSPY_FLAGS \
-    || echo "[profile_pyspy] WARNING: py-spy record が失敗しました (rc=$?)"
-  echo "[$(date +%H:%M:%S)]   py-spy record 完了 -> $SVG_PATH"
+    || echo "[profile_pyspy] WARNING: py-spy record (SVG) が失敗しました (rc=$?)"
+  echo "[$(date +%H:%M:%S)]   py-spy record (SVG) 完了 -> $SVG_PATH"
 
   # ------------------------------------------------------------------
-  # py-spy dump — 現時点のスタックスナップショットを1回取得する。
+  # py-spy dump — SVG 記録完了後、現時点のスタックスナップショットを1回取得する。
   # record とは異なり瞬時にスタックを出力するため、フレームグラフを
-  # 補完するデバッグ情報として有用。
+  # 補完するデバッグ情報として有用。speedscope 記録より前に取得することで
+  # 直近の steady-state スタックを捕捉する。
   # ------------------------------------------------------------------
   DUMP_PATH="$RUN_DIR/pyspy-dump.txt"
   echo "[$(date +%H:%M:%S)]   py-spy dump (スタックスナップショット) ..."
@@ -184,6 +197,28 @@ for SEED in $SEEDS; do
     echo "[$(date +%H:%M:%S)]   py-spy dump 完了 -> $DUMP_PATH"
   else
     echo "[profile_pyspy] WARNING: dump 時点でベンチプロセスは終了済みでした。" | tee "$DUMP_PATH"
+  fi
+
+  # ------------------------------------------------------------------
+  # py-spy record (speedscope JSON) — dump 取得後、ベンチが生きていれば
+  # 同じオプションで speedscope 形式の JSON を追加記録する。
+  # speedscope.app の sandwich / time-order / left-heavy ビューで解析可能。
+  # ------------------------------------------------------------------
+  SPEEDSCOPE_PATH="$RUN_DIR/pyspy.speedscope.json"
+  if kill -0 "$PY_PID" 2>/dev/null; then
+    echo "[$(date +%H:%M:%S)]   py-spy record (speedscope) 開始 (duration=${PYSPY_DURATION_SEC}s, rate=${PYSPY_RATE}Hz) ..."
+    # shellcheck disable=SC2086
+    sudo "$PYSPY_BIN" record \
+      --pid "$PY_PID" \
+      --output "$SPEEDSCOPE_PATH" \
+      --format speedscope \
+      --duration "$PYSPY_DURATION_SEC" \
+      --rate "$PYSPY_RATE" \
+      $PYSPY_FLAGS \
+      || echo "[profile_pyspy] WARNING: py-spy record (speedscope) が失敗しました (rc=$?)"
+    echo "[$(date +%H:%M:%S)]   py-spy record (speedscope) 完了 -> $SPEEDSCOPE_PATH"
+  else
+    echo "[$(date +%H:%M:%S)]   WARNING: speedscope 記録をスキップ — SVG 記録後にベンチプロセスが終了済みです (PID=$PY_PID)"
   fi
 
   # ------------------------------------------------------------------
@@ -216,6 +251,51 @@ for SEED in $SEEDS; do
 
   T1=$(date +%s)
   WALL=$((T1 - T0))
+
+  # ------------------------------------------------------------------
+  # pyspy_tree.py — speedscope JSON (優先) または SVG から Markdown ツリーを生成。
+  # 入力ファイルが存在しない場合や python3 が失敗した場合は警告のみで継続。
+  # ベンチプロセスの後処理完了後に実行することで出力ファイルの書き込みが
+  # 確実に完了してから解析を開始する。
+  # ------------------------------------------------------------------
+  TREE_PATH="$RUN_DIR/pyspy.tree.md"
+  if [ -f "$PYSPY_TREE" ]; then
+    # speedscope JSON を優先し、なければ SVG にフォールバック
+    if [ -f "$SPEEDSCOPE_PATH" ]; then
+      TREE_INPUT="$SPEEDSCOPE_PATH"
+    elif [ -f "$SVG_PATH" ]; then
+      TREE_INPUT="$SVG_PATH"
+    else
+      TREE_INPUT=""
+    fi
+
+    if [ -n "$TREE_INPUT" ]; then
+      echo "[$(date +%H:%M:%S)]   pyspy_tree.py 実行中 (入力: $TREE_INPUT) ..."
+      python3 "$PYSPY_TREE" "$TREE_INPUT" \
+        --format md \
+        --min-pct 0.5 \
+        --max-depth 25 \
+        --max-children 8 \
+        --top-leaves 30 \
+        > "$TREE_PATH" 2>"$TREE_PATH.err" \
+        && echo "[$(date +%H:%M:%S)]   pyspy_tree.py 完了 -> $TREE_PATH" \
+        || {
+          TREE_ERR=$?
+          echo "[profile_pyspy] WARNING: pyspy_tree.py が失敗しました (rc=$TREE_ERR)"
+          # エラーメッセージを pyspy.tree.md に書き込んで後から確認できるようにする
+          printf '# pyspy_tree.py エラー\n\nexit code: %s\n\n```\n' "$TREE_ERR" > "$TREE_PATH"
+          cat "$TREE_PATH.err" >> "$TREE_PATH"
+          printf '```\n' >> "$TREE_PATH"
+        }
+      rm -f "$TREE_PATH.err"
+    else
+      echo "[profile_pyspy] WARNING: pyspy_tree.py のスキップ — 入力ファイル (speedscope JSON / SVG) が見つかりません。"
+      printf '# pyspy_tree.py スキップ\n\n入力ファイル (speedscope JSON / SVG) が見つかりませんでした。\n' > "$TREE_PATH"
+    fi
+  else
+    echo "[profile_pyspy] WARNING: pyspy_tree.py が見つかりません ($PYSPY_TREE) — ツリー解析をスキップします。"
+    printf '# pyspy_tree.py スキップ\n\npyspy_tree.py が見つかりませんでした: %s\n' "$PYSPY_TREE" > "$TREE_PATH"
+  fi
 
   # ------------------------------------------------------------------
   # run_bench.sh と同一のパーシングロジックで summary.csv に追記
@@ -255,29 +335,39 @@ extra_flags:       $PYSPY_FLAGS
 outputs
 -------
 flamegraph SVG:    $SVG_PATH
+speedscope JSON:   $SPEEDSCOPE_PATH
+tree analysis:     $TREE_PATH
 stack dump:        $DUMP_PATH
 bench log:         $RUN_DIR/bench.log
 summary csv:       $SUMMARY
 
-view flamegraph
----------------
-  # ブラウザで直接開く
+view flamegraph / speedscope
+-----------------------------
+  # SVG をブラウザで直接開く
   xdg-open "$SVG_PATH"   # Linux
   open "$SVG_PATH"        # macOS
+
+  # speedscope JSON は https://www.speedscope.app にドロップ
+  # sandwich / time-order / left-heavy ビューでインタラクティブに解析可能
 
 download (S3 マウント経由ではなく直接 S3 から取得する場合)
 ---------
   aws s3 cp "s3://$(echo "$RUN_DIR" | sed 's|/mnt/s3files/||')/pyspy.svg" ./pyspy.svg
+  aws s3 cp "s3://$(echo "$RUN_DIR" | sed 's|/mnt/s3files/||')/pyspy.speedscope.json" ./pyspy.speedscope.json
 
-offline parse (SVG から関数名・時間を抽出)
+offline parse (pyspy_tree.py で Markdown ツリーを生成)
 ------
-  # 関数名トップ20 を呼び出し時間降順でリスト
-  grep -oP '(?<=title>)[^<]+' "$SVG_PATH" | sort | uniq -c | sort -rn | head -20
+  python3 scripts/pyspy_tree.py pyspy.speedscope.json --format md --min-pct 0.5 --max-depth 25 --max-children 8 --top-leaves 30 > pyspy.tree.md
+  # SVG からも解析可能 (speedscope JSON がない場合):
+  python3 scripts/pyspy_tree.py pyspy.svg --format md --min-pct 0.5 > pyspy.tree.md
 README
 
   echo "[$(date +%H:%M:%S)] === END seed=$SEED rc=$BENCH_RC wall=${WALL}s mean_total_fps=${MEAN_TOTAL_FPS:-NA} ==="
-  echo "[$(date +%H:%M:%S)]   SVG:  $SVG_PATH"
-  echo "[$(date +%H:%M:%S)]   DUMP: $DUMP_PATH"
+  echo "[$(date +%H:%M:%S)]   SVG:        $SVG_PATH"
+  echo "[$(date +%H:%M:%S)]   SPEEDSCOPE: $SPEEDSCOPE_PATH"
+  echo "[$(date +%H:%M:%S)]   TREE:       $TREE_PATH"
+  echo "[$(date +%H:%M:%S)]   DUMP:       $DUMP_PATH"
+  echo "[$(date +%H:%M:%S)]   HINT: pyspy.speedscope.json を https://www.speedscope.app にドロップして解析できます"
 done
 
 echo "ALL_SEEDS_DONE (py-spy) for task=$TASK tag=$TAG"
@@ -285,9 +375,10 @@ echo "=== summary.csv ==="
 cat "$SUMMARY"
 
 echo ""
-echo "=== フレームグラフの確認方法 ==="
-echo "  ブラウザで開く:  open/xdg-open \$SVG_PATH"
+echo "=== フレームグラフ・プロファイルの確認方法 ==="
+echo "  SVG をブラウザで開く:  open/xdg-open pyspy.svg"
+echo "  speedscope JSON を解析: https://www.speedscope.app にドロップ (sandwich/time-order/left-heavy)"
 echo "  S3 からダウンロード (例):"
 echo "    aws s3 cp s3://YOUR_BUCKET/pyspy/$TAG/ . --recursive --exclude '*.log'"
-echo "  オフライン解析 (top 関数):"
-echo "    grep -oP '(?<=title>)[^<]+' pyspy.svg | sort | uniq -c | sort -rn | head -20"
+echo "  オフライン Markdown ツリー解析:"
+echo "    python3 scripts/pyspy_tree.py pyspy.speedscope.json --format md --min-pct 0.5 --max-depth 25 > pyspy.tree.md"
