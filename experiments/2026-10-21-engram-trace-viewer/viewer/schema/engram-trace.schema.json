@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engram-trace.schema.json",
+  "title": "engram-trace v1",
+  "description": "The Engram n-gram lookups of one token sequence. hash_rows is required; gates are optional, and a viewer shows them only when present.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "layers",
+    "tokens",
+    "hash_rows",
+    "model"
+  ],
+  "properties": {
+    "format": {
+      "const": "engram-trace"
+    },
+    "version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      }
+    },
+    "source": {
+      "description": "Where the hashing came from, pinned so the trace can be reproduced.",
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "sha256": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "description": "One sentence per field saying how it was obtained, or null when the field is absent.",
+      "type": "object",
+      "properties": {
+        "hash_rows": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gates": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": [
+        "max_ngram_size",
+        "n_heads"
+      ],
+      "properties": {
+        "max_ngram_size": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "n_heads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_dim": {
+          "type": "integer"
+        },
+        "hc_mult": {
+          "type": "integer"
+        },
+        "pad_compressed_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "layers": {
+      "description": "One entry per Engram layer, in the order of the second axis of hash_rows.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "layer_id",
+          "num_rows",
+          "columns"
+        ],
+        "properties": {
+          "layer_id": {
+            "type": "integer"
+          },
+          "num_rows": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "columns": {
+            "description": "The table's row ranges, one per (n-gram size, head), in the order of the third axis of hash_rows. Ranges are contiguous and cover num_rows.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "n",
+                "head",
+                "offset",
+                "size"
+              ],
+              "properties": {
+                "n": {
+                  "type": "integer",
+                  "minimum": 2
+                },
+                "head": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "size": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tokens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          },
+          "compressed_id": {
+            "type": "integer",
+            "description": "The id after the model's tokenizer compression; tokens that normalize alike share it."
+          },
+          "display": {
+            "type": "string",
+            "description": "Optional label for a token whose text alone is not readable, such as one byte of a multi-byte character."
+          }
+        }
+      }
+    },
+    "hash_rows": {
+      "description": "[position][layer][column]: the table row each lookup reads, counted from the start of the layer's table.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "gates": {
+      "description": "Optional. [position][layer][hc copy]: the gate value in (0, 1) the model applied.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  }
+}

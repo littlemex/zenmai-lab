@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Engram trace viewer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main>
+    <div id="stage" aria-label="3D view of the Engram lookups">
+    </div>
+    <aside id="panel">
+      <header>
+        <h1>Engram trace viewer</h1>
+        <div class="pickers">
+          <select id="catalog" aria-label="Bundled traces"></select>
+          <button id="open-file" type="button">Open trace</button>
+          <input id="file" class="visually-hidden" type="file" accept="application/json,.json" tabindex="-1" aria-hidden="true">
+        </div>
+      </header>
+      <p id="error" class="error" hidden></p>
+      <section id="header"></section>
+      <details class="legend">
+        <summary>How to read this</summary>
+        <p>Each column is the row range of one (n-gram size, hash head) pair in the layer's table, first row at the bottom.</p>
+        <p>A mark is a row read by a position up to the current one. Marks that overlap glow brighter, but one mark spans about a hundred thousand rows, so overlap is not proof of the same row: the table below and the dashed arcs show exact reuse.</p>
+        <p>Solid lines join the current token to the rows it reads. A dashed yellow arc means an earlier token read that row first.</p>
+        <p>The strip on the left edge of a column is the rank that holds those rows at the chosen world size.</p>
+      </details>
+      <section id="position"></section>
+    </aside>
+  </main>
+  <footer id="controls">
+    <button id="prev" aria-label="Previous position" title="Previous (Left arrow)">
+      <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+    </button>
+    <button id="play" aria-label="Play" title="Play / pause (Space)">
+      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+    </button>
+    <button id="next" aria-label="Next position" title="Next (Right arrow)">
+      <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+    </button>
+    <div class="timeline">
+      <canvas id="heat" height="10" aria-hidden="true"></canvas>
+      <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Position">
+    </div>
+    <span id="where" class="where">0 / 0</span>
+    <label>Layer <select id="layer"></select></label>
+    <label>World size <input id="world" type="number" min="1" max="4096" value="8"></label>
+    <label>Speed
+      <select id="speed">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select>
+    </label>
+  </footer>
+  <div class="drop-hint">Drop an engram-trace JSON file</div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
