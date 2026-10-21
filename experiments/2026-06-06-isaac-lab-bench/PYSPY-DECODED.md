@@ -173,7 +173,7 @@
 ```bash
 # EC2 上で
 cd ~/IsaacLab && conda activate env_isaaclab
-cd ~/zenmai-lab/experiments/isaac-lab-bench
+cd ~/zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 
 # プロファイル取得 (60 秒、SVG + speedscope JSON + tree.md 自動生成)
 bash scripts/profile_pyspy.sh Isaac-Velocity-Rough-G1-v0 g1-pyspy "42" 100 16384

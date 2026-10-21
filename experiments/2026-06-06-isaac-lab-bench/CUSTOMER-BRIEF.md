@@ -120,7 +120,7 @@ self.scene.robot = self.scene.robot.replace(
 
 ```bash
 git clone https://github.com/littlemex/zenmai-lab.git
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 bash scripts/diagnose.sh --task Isaac-Velocity-Rough-G1-v0
 # 出力をペーストしてください
 ```
@@ -138,7 +138,7 @@ bash scripts/diagnose.sh --task Isaac-Velocity-Rough-G1-v0
 ```bash
 # 全部 EC2 上 (DCV) で
 git clone https://github.com/littlemex/zenmai-lab.git
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 cp bench.env.sample bench.env && source bench.env
 
 # (1) ベースライン

@@ -27,7 +27,7 @@
 **コマンド** (SSM モード)
 
 ```bash
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 cp ssm.env.sample ssm.env
 $EDITOR ssm.env  # INSTANCE_ID, AWS_REGION, RUN_TAG_PREFIX=g6e2xl
 bash orchestrate.sh g1
@@ -169,7 +169,7 @@ bash orchestrate.sh g1-num-envs
 
 ```bash
 git clone git@github.com:littlemex/zenmai-lab.git
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 
 # DCV モード (EC2 上で直接)
 cp bench.env.sample bench.env

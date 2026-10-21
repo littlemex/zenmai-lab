@@ -50,7 +50,7 @@ isaac-lab-bench/
 
 ```bash
 git clone https://github.com/littlemex/zenmai-lab.git
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 
 # 初回のみ
 cp bench.env.sample bench.env
@@ -75,7 +75,7 @@ python3 scripts/dmon_stats.py --format md "$DEST_BASE"/g1-prod/run-seed*/nvidia-
 
 ```bash
 git clone https://github.com/littlemex/zenmai-lab.git
-cd zenmai-lab/experiments/isaac-lab-bench
+cd zenmai-lab/experiments/2026-06-06-isaac-lab-bench
 
 # 初回のみ
 cp ssm.env.sample ssm.env

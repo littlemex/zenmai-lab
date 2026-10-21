@@ -13,7 +13,7 @@
 ### Step 1: dmon_stats.py に fb(MB) 列を追加し既存全ログを再解析する
 
 - **Instance**: ローカル (EC2 不要)
-- **Profile / script**: /Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/scripts/dmon_stats.py を直接編集。Stats dataclass に fb_avg/fb_max を追加し parse_file() で col 14 を読む。emit_text/csv/md に列を追加後、既存3本の dmon ログに対して python3 scripts/dmon_stats.py --format md results/*/run-seed*/nvidia-smi-dmon.log を実行する。
+- **Profile / script**: /Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/scripts/dmon_stats.py を直接編集。Stats dataclass に fb_avg/fb_max を追加し parse_file() で col 14 を読む。emit_text/csv/md に列を追加後、既存3本の dmon ログに対して python3 scripts/dmon_stats.py --format md results/*/run-seed*/nvidia-smi-dmon.log を実行する。
 - **Why this order**: コスト $0、所要 20 分、EC2 不要のローカル作業。「num_envs=16384 で VRAM 33% (15.2 GB) しか使っていない」という数値を公式ツールとして出力可能にする。NOTES.md L160 の open question を解決し、推奨「num_envs を上げろ」の安全根拠を確定させる。他の全ステップと並行してすぐに始められるため order=1 とする。同時に Instance B での Flat ベースライン計測（order 2）を開始する。
 - **Success criteria**: dmon_stats.py --format md の出力に fb_avg_mb / fb_max_mb 列が追加され、n4096: max_fb≈7,297 MB / n8192: ≈9,951 MB / n16384: ≈15,237 MB の3点が一致すること。
 
@@ -80,19 +80,19 @@
 
 ## 成果物
 
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/scripts/dmon_stats.py`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/scripts/dmon_stats.py`
   - fb_avg_mb / fb_max_mb 列を追加した更新版。既存3本のdmonログから VRAM 実使用量テーブル（n4096=7.3 GB / n8192=9.9 GB / n16384=15.2 GB）を出力する。顧客への「num_envs を上げても VRAM は余裕あり」推奨の定量根拠として提示する。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/physx-abl2-contact-scope-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/physx-abl2-contact-scope-*/summary.csv`
   - ContactSensor prim_path 絞り込み実験（全23リンク→足首2リンク）の fps / MEM% 比較結果。「設定1行で MEM 帯域を X% 削減できる」という顧客向け即効性推奨の実測値。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/physx-abl1-solver-iter-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/physx-abl1-solver-iter-*/summary.csv`
   - G1 ソルバーイテレーション削減（pos 8→4, vel 4→1）の fps / max_rewards 比較。「デフォルト設定は AnymalC 実績値の2倍に設定されている」仮説の実測による確認または棄却。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/physx-abl3-heightscan-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/physx-abl3-heightscan-*/summary.csv`
   - height scan 3パターン比較（None / halffreq / lowres）の fps 序列データ。「raycast コストが帯域ボトルネックの主要因」という主張の定量的証明または反証。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/g1-flat-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/g1-flat-*/summary.csv`
   - G1-Flat（height_scanner=None）のベースライン fps。Rough+4096(71k fps) との比較で「Flat 環境は Rough 比 X倍速い」を実数で示す。顧客が rough 地形不要なら即日適用できる最大スループット改善案の根拠。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/g1-oom-sweep-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/g1-oom-sweep-*/summary.csv`
   - num_envs=24576/32768 での OOM 境界確定データ。「g6e.4xlarge での安全な最大 num_envs = N」を具体的な数値で顧客に提示するための根拠。VRAM テーブルと組み合わせて1枚のスライドに整理できる。
-- `/Users/akazawt/work/zenmai-lab/experiments/isaac-lab-bench/results/physx-abl6-combined-stack-*/summary.csv`
+- `/Users/akazawt/work/zenmai-lab/experiments/2026-06-06-isaac-lab-bench/results/physx-abl6-combined-stack-*/summary.csv`
   - ABL-1〜3 のベスト設定を組み合わせた「最適化スタック」の fps 実測値。「最適化後の EC2 G1 Rough は X fps = 顧客環境より Y倍速い」という顧客ピッチの核心数値を含む。30h→20h 短縮目標の達成可否を確定させる。
 
 ---
