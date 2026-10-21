@@ -26,3 +26,7 @@ legacy/physical-ai/     the earlier Physical AI lab layout (EC2 and Slurm helper
 2. Keep everything the experiment needs inside it, with a README that states what it measures, how to reproduce it from a fresh clone, and the results.
 3. Run on a cluster built with distributed-ai; keep cluster-specific values (namespaces, account ids, addresses) out of the files and pass them as environment variables.
 4. Track results that a README cites; large outputs such as checkpoints stay out of git.
+
+## License
+
+Apache License 2.0, in [LICENSE](LICENSE). Vendored third-party code keeps its own license file next to it.

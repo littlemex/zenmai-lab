@@ -103,4 +103,4 @@ uv run --python 3.11 --with-requirements recorder/requirements.txt --with-requir
 
 ## License
 
-`viewer/vendor/three` is three.js 0.186.1 under the MIT license, kept unmodified with its `LICENSE` file.
+The viewer, recorder and tests are under the Apache License 2.0 in the repository's [LICENSE](../../LICENSE). `viewer/vendor/three` is three.js 0.186.1 under the MIT license, kept unmodified with its `LICENSE` file.
