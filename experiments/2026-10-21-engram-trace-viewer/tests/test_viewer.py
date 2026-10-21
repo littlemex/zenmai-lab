@@ -208,9 +208,21 @@ def test_the_ladder_trace_matches_the_schema():
     jsonschema.validate(LADDER, json.loads((VIEWER / "schema/engram-trace.schema.json").read_text()))
 
 
-def test_the_ladder_summary_is_the_traces_own_count(page):
-    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram&b=baseline")
-    expect(page.locator("#summary .stat").first).to_be_visible()
+def display(text):
+    return text[1:] if text.startswith(" ") else f"-{text}"
+
+
+def pct(p):
+    return f"{100 * p:.{0 if p >= 0.1 else 1}f} %"
+
+
+def ladder(page, query):
+    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&{query}")
+    expect(page.locator("#headline")).not_to_be_empty()
+
+
+def test_the_ladder_counts_are_the_traces_own(page):
+    ladder(page, "b=baseline")
     lens = LADDER["lens"]
     n = len(LADDER["tokens"]) - 1
     sa = [settled_block(b) for b in lens["values"]["engram"][:n]]
@@ -219,49 +231,89 @@ def test_the_ladder_summary_is_the_traces_own_count(page):
     nxt = [token["id"] for token in LADDER["tokens"][1:]]
     right = [t for t in range(n) if final("engram", t) == nxt[t] == final("baseline", t)]
 
-    def line(title, positions):
+    def count(positions):
         sooner = sum(sa[t] < sb[t] for t in positions)
         later = sum(sa[t] > sb[t] for t in positions)
-        above = lambda s: sum(lens["n_layer"] - 1 - s[t] for t in positions) / len(positions)  # noqa: E731
-        return (f"{title} ({len(positions)}): with Engram settles sooner at {sooner}, later at {later}, same at "
-                f"{len(positions) - sooner - later}; blocks above the settled one, on average {above(sa):.2f} against {above(sb):.2f}")
+        return len(positions), sooner, later, len(positions) - sooner - later
 
-    stats = page.locator("#summary .stat").all_inner_texts()
-    assert stats == [line("all positions", range(n)), line("both end on the actual next token", right)]
+    n_all, sooner, later, same = count(range(n))
+    expect(page.locator("#headline")).to_have_text(
+        f"With Engram, the top choice locks in at an earlier block than trained without Engram at {sooner} of {n_all} positions, and at a later one at {later}.")
+    stats = page.locator("#counts .stat").all_text_contents()  # inside the closed "Details"
+    r = count(right)
+    assert stats == [f"All positions ({n_all}), against trained without Engram: sooner at {sooner}, later at {later}, same at {same}.",
+                     f"Where both end on the token that actually comes next ({r[0]}): sooner at {r[1]}, later at {r[2]}, same at {r[3]}."]
     assert page.locator(".chart .col").count() == n
     assert page.errors == []
 
 
-def test_the_ladder_shows_every_block_of_one_position(page):
+def test_one_position_shows_the_lookup_and_every_blocks_choices(page):
     t = next(i for i, token in enumerate(LADDER["tokens"][:-1]) if token["text"] == " Sax")
-    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram&b=baseline&t={t}")
-    expect(page.locator(".focus-text")).to_have_text("·Sax → on")
     lens = LADDER["lens"]
-    for column, name in enumerate(["engram", "baseline"]):
-        blocks = lens["values"][name][t]
-        col = page.locator(".ladder-col").nth(column)
-        words = col.locator(".rung-word").all_inner_texts()
-        texts = [lens["vocab"][str(blocks[k]["top"][0][0])] for k in range(lens["n_layer"] - 1, -1, -1)]
-        expected = ["·" + text[1:] if text.startswith(" ") else text for text in texts]
-        assert words == expected
-        pct = lambda p: f"{100 * p:.{0 if p >= 0.1 else 1}f} %"  # noqa: E731
-        assert col.locator(".rung-p").all_inner_texts() == [pct(blocks[k]["top"][0][1]) for k in range(lens["n_layer"] - 1, -1, -1)]
-        expect(col.locator(".rung.settles .rung-block")).to_have_text(str(settled_block(blocks)))
+    expect_next = LADDER["tokens"][t + 1]
+    for block in (0, 1, 11):
+        ladder(page, f"b=baseline&t={t}&block={block}")
+        expect(page.locator("#block-label")).to_have_text(f"block {block}")
+        for name in ("engram", "baseline"):
+            cell = lens["values"][name][t][block]
+            dist = page.locator(f'.dist[data-variant="{name}"]')
+            bars = dist.locator(".bar:not(.other)")
+            assert bars.locator(".w").all_inner_texts() == [display(lens["vocab"][str(i)]) for i, _ in cell["top"]]
+            assert bars.locator(".p").all_inner_texts() == [pct(p) for _, p in cell["top"]]
+            rest = max(0.0, 1 - sum(p for _, p in cell["top"]))
+            expect(dist.locator(".bar.other .p")).to_have_text(pct(rest))
+            nexts = [i for i, (tid, _) in enumerate(cell["top"]) if tid == expect_next["id"]]
+            assert [bars.nth(i).get_attribute("class") for i in nexts] == ["bar is-next"] * len(nexts)
+            expect(dist.locator(".next-line")).to_have_text(f"actual next {display(expect_next['text'])}: {pct(cell['p_next'])}")
+    expect(page.locator("#question .chip")).to_have_text(display(expect_next["text"]))
     gate = LADDER["gates"][t][0][0]
-    expect(page.locator(".ladder-col").nth(0).locator(".rung-engram")).to_have_text(f"Engram added, gate {gate:.2f}")
-    expect(page.locator(".ladder-col").nth(1).locator(".rung-engram")).to_have_text("no Engram")
+    expect(page.locator("#lookup .gate b")).to_have_text(pct(gate))
+    # the lookup's effect: the same weights at block 1, without and with the lookup
+    for name in ("engram_off", "engram"):
+        cell = lens["values"][name][t][1]
+        expect(page.locator(f'.effect-row[data-variant="{name}"]')).to_contain_text(
+            f"top choice {display(lens['vocab'][str(cell['top'][0][0])])} ({pct(cell['top'][0][1])})"
+            f" · the actual next token {display(expect_next['text'])}: {pct(cell['p_next'])}")
+    keys = page.locator("#lookup .ngram").all_inner_texts()
+    assert keys == ["".join(x["text"] for x in LADDER["tokens"][t - n + 1:t + 1]).strip() for n in (2, 3)]
+    for name in ("engram", "baseline"):
+        blocks = lens["values"][name][t]
+        word = display(lens["vocab"][str(blocks[-1]["top"][0][0])])
+        expect(page.locator(f'.answer-row[data-variant="{name}"]')).to_contain_text(
+            f"writes {word} ({pct(blocks[-1]['top'][0][1])}), its top choice from block {settled_block(blocks)} on")
     assert page.errors == []
 
 
 def test_the_ladder_steps_and_keeps_the_view_in_the_url(page):
-    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram_off&b=engram&t=3")
-    expect(page.locator("#where")).to_have_text(f"3 / {len(LADDER['tokens']) - 2}")
+    n = len(LADDER["tokens"]) - 1
+    ladder(page, "b=engram_off&t=3&block=2")
+    expect(page.locator("#where")).to_contain_text(f"token 4 of {n}")
     page.click("#next")
-    expect(page.locator("#where")).to_have_text(f"4 / {len(LADDER['tokens']) - 2}")
-    expect(page.locator("#a")).to_have_value("engram_off")
-    assert "t=4" in page.url and "a=engram_off" in page.url and "b=engram" in page.url
+    expect(page.locator("#where")).to_contain_text(f"token 5 of {n}")
+    expect(page.locator("#b")).to_have_value("engram_off")
+    page.click("#play")  # pause the climb the click started
+    assert "t=4" in page.url and "b=engram_off" in page.url
     page.select_option("#b", "baseline")
     assert "b=baseline" in page.url
+    page.evaluate("document.activeElement.blur()")
+    block = int(page.input_value("#block"))
+    page.keyboard.press("ArrowUp")
+    expect(page.locator("#block")).to_have_value(str(block + 1))
+    assert f"block={block + 1}" in page.url
+    assert page.errors == []
+
+
+def test_the_ladder_switches_to_japanese_and_back(page):
+    ladder(page, "b=baseline")
+    page.click("#lang")
+    expect(page.locator("html")).to_have_attribute("lang", "ja")
+    expect(page.locator("#headline")).to_contain_text("Engram なしで学習したモデルより早い段で 1 位の候補が固まりました")
+    expect(page.locator("#b option").first).to_have_text("表引きだけを止めた同じモデル")
+    assert "lang=ja" in page.url
+    page.reload()
+    expect(page.locator("h1")).to_have_text("Engram の働きを見る")
+    page.click("#lang")
+    expect(page.locator("h1")).to_have_text("Engram ladder")
     assert page.errors == []
 
 

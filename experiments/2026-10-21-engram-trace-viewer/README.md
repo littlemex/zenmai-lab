@@ -48,18 +48,25 @@ Open <http://localhost:8000/>. The server keeps this terminal; run the commands 
 
 `ladder.html` opens a trace that carries a `lens` field. The bundled `traces/nanogpt-hastings.json` is written by [`engram_lm.record_trace`](../2026-10-21-engram-nanogpt/engram_lm/record_trace.py) from the small models trained in [`2026-10-21-engram-nanogpt`](../2026-10-21-engram-nanogpt/): a prompt about the Battle of Hastings continued greedily by the Engram model, then read by three variants of the same seed, the Engram model, the same weights with the Engram layer skipped, and the model trained without Engram.
 
-![The ladder view at " Sax": the Engram model's top-1 is "on" from block 0, at 2 % there and 61 % after block 1, which receives the Engram output; the model trained without Engram turns to "on" at block 5](docs/ladder.png)
+![The ladder view at " Sax", block 1: with the lookup the same weights put "-on" first at 61 % instead of "@" at 12 %, while the model trained without Engram still puts "-s" first](docs/ladder.png)
 
-With the server of the previous section running, open <http://localhost:8000/ladder.html>.
+With the server of the previous section running, open <http://localhost:8000/ladder.html>, or <http://localhost:8000/ladder.html?lang=ja> for the page in Japanese. The button at the top right switches between English and Japanese.
+
+The page always shows the model with Engram, the variant whose `engram` is `added`, against one other variant picked at the top: the model trained without Engram, or the same weights with Engram skipped.
 
 | On screen | Meaning |
 |---|---|
-| Text | Grey tokens are the prompt, white ones were generated. A token is shaded green where the first picked model settles at an earlier block than the second, and underlined red where later. The last token has no next token and is not compared |
-| Summary | How many positions settle sooner, later and at the same block, and the mean number of blocks above the settled one; once over every position, and once over the positions where both models end on the token that actually comes next |
-| Bars | Blocks above the settled one, per position and per model |
-| Ladder | For the selected position, each block's top-1 token and its probability, block 0 at the bottom, with a bar for the probability the block gives the final answer. The settled block is underlined in yellow; the band below block 1 is where the Engram output is added, with its gate |
+| Headline | At how many positions the top choice of the model with Engram locks in at an earlier block than the other model's, and at how many at a later one |
+| Text | Grey is the prompt, white what the model with Engram wrote after it. A word is shaded green where the model with Engram fixes its answer at an earlier block, and underlined red where later. Clicking a word selects it |
+| Chart | One column per word, with one dot per model at the block where its answer is fixed, block 0 at the bottom. The dashed line is where the Engram output is added |
+| Step 1 | The text up to the selected word, and the word that actually comes next |
+| Step 2 | The n-grams ending at the selected token that the Engram lookup uses as keys, how many rows it reads from how large a table, and the gate, how strongly the model mixes in what it finds. When the trace has a variant with Engram skipped, the top choice and the probability of the actual next token at the block the lookup is added before, for the same weights without and with the lookup: what the lookup changes |
+| Step 3 | For the block on the slider, each model's top five next words with their probabilities and the probability left for all other words; the word that actually comes next is underlined. Below, the probability each model gives the actual next word after every block. Selecting a word plays the blocks from 0 to the last |
+| Step 4 | The word each model writes, its top choice at the last block, and the block from which that choice no longer changed |
 
-Each block's prediction is its residual stream passed through the model's final LayerNorm and output head (LogitLens). A prediction settles at the first block from which the top-1 token equals the last block's top-1 token and stays equal up to the last block. The blocks above the settled one still run and still change the probabilities; settling says only that their top-1 no longer changes, and a position can settle on a guess its block gives little probability. The counts describe one text and one seed, and the 40 generated tokens are the Engram model's own continuation, which favours it; [`engram_lm.settling`](../2026-10-21-engram-nanogpt/engram_lm/settling.py) counts the same quantity over the 483 full windows of the validation split for all three seeds. The pickers choose the two models compared, Space plays through the text, and the URL keeps the position and the two models.
+Each block's prediction is its residual stream passed through the model's final LayerNorm and output head (LogitLens). An answer is fixed, or settles, at the first block from which the top-1 token equals the last block's top-1 token and stays equal up to the last block. The blocks above still run and still change the probabilities; settling says only that their top-1 no longer changes, and a position can settle on a guess its block gives little probability. A token that continues the previous one is shown with a leading `-`. The counts describe one text and one seed, and the 40 generated tokens are the Engram model's own continuation, which favours it; [`engram_lm.settling`](../2026-10-21-engram-nanogpt/engram_lm/settling.py) counts the same quantity over the 483 full windows of the validation split for all three seeds. The URL keeps the word, the other model, the block and the language. The arrow keys move between words (left and right) and blocks (up and down), and Space plays the blocks.
+
+The colours, radii and fonts of this page are Cloudscape Design System tokens in dark mode, copied with their token names into `css/ladder.css`.
 
 ## Record a trace
 
@@ -102,7 +109,7 @@ uv run --python 3.11 --with-requirements recorder/requirements.txt --with-requir
 uv run --python 3.11 --with-requirements recorder/requirements.txt --with-requirements tests/requirements.txt python -m pytest tests
 ```
 
-`tests/test_recorder.py` rebuilds the table layout (the prime-sized ranges in (n, head) order) and the hash multipliers from the configuration with its own code, recomputes every row id from them and the trace's compressed ids, validates the trace against the schema, and checks that the same n-gram reads the same rows whatever its case. It does not re-derive the tokenizer's compression map, which it takes from the trace. `tests/test_viewer.py` serves the `viewer` directory over HTTP, opens it in headless Chromium, and compares the rows, owners, first-read positions and gate values on the page with the trace; it also checks that a copied URL restores the view, that out-of-range URL values fall back to a valid view, and that a malformed trace is refused with the reason. For the ladder view it recomputes both summary lines from the trace, checks the settled block against hand-made cases including a top-1 that matches, changes and comes back, compares the word and probability of every rung of one position and its gate with the trace, and checks the URL, the step controls, and the refusal of a trace without `lens` or with a malformed one.
+`tests/test_recorder.py` rebuilds the table layout (the prime-sized ranges in (n, head) order) and the hash multipliers from the configuration with its own code, recomputes every row id from them and the trace's compressed ids, validates the trace against the schema, and checks that the same n-gram reads the same rows whatever its case. It does not re-derive the tokenizer's compression map, which it takes from the trace. `tests/test_viewer.py` serves the `viewer` directory over HTTP, opens it in headless Chromium, and compares the rows, owners, first-read positions and gate values on the page with the trace; it also checks that a copied URL restores the view, that out-of-range URL values fall back to a valid view, and that a malformed trace is refused with the reason. For the ladder view it recomputes the headline and both counts from the trace, checks the settled block against hand-made cases including a top-1 that matches, changes and comes back, compares the five words, their probabilities, the rest, the marked next word, the lookup keys, the gate and each model's written word at one position with the trace, and checks the URL, the step controls, the language switch, and the refusal of a trace without `lens` or with a malformed one.
 
 ## Layout
 
@@ -114,7 +121,7 @@ uv run --python 3.11 --with-requirements recorder/requirements.txt --with-requir
 ├── viewer/                  the static application
 │   ├── index.html           the table and 3D view
 │   ├── ladder.html          the ladder view
-│   ├── css/                 style.css, ladder.css
+│   ├── css/                 style.css (table and 3D view), ladder.css (ladder view)
 │   ├── js/trace.js          loading, checks and indexing (no DOM, no three.js)
 │   ├── js/colors.js         colours shared by the scene and the panel
 │   ├── js/scene.js          the three.js scene
