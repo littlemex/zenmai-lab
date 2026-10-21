@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: engram-lm-train
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: train
+          image: pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime
+          command: ["bash", "/code/run.sh"]
+          env:
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: RUN_NAME
+              value: wikitext103-3seeds
+            - name: MAX_STEPS
+              value: ""
+            - name: SEEDS
+              value: "1337 1338 1339"
+          resources:
+            limits:
+              nvidia.com/gpu: 2
+            requests:
+              cpu: "16"
+              memory: 96Gi
+          volumeMounts:
+            - { name: code, mountPath: /code }
+            - { name: work, mountPath: /work }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - name: code
+          configMap:
+            name: engram-lm-code
+            items:
+              - { key: init, path: engram_lm/__init__.py }
+              - { key: data, path: engram_lm/data.py }
+              - { key: engram, path: engram_lm/engram.py }
+              - { key: evaluate, path: engram_lm/evaluate.py }
+              - { key: model, path: engram_lm/model.py }
+              - { key: tokenizer, path: engram_lm/tokenizer.py }
+              - { key: train, path: engram_lm/train.py }
+              - { key: config-engram, path: configs/engram.json }
+              - { key: config-baseline, path: configs/baseline.json }
+              - { key: requirements, path: requirements.txt }
+              - { key: run, path: run.sh }
+        - name: work
+          persistentVolumeClaim:
+            claimName: engram-lm
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 16Gi }

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: engram-lm-fetch
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 3600
+  containers:
+    - name: fetch
+      image: public.ecr.aws/amazonlinux/amazonlinux:2023
+      command: ["bash", "-c", "dnf install -y -q tar && touch /tmp/ready && sleep 3600"]  # kubectl cp needs tar
+      readinessProbe:
+        exec: { command: ["test", "-e", "/tmp/ready"] }
+        periodSeconds: 2
+      volumeMounts:
+        - { name: work, mountPath: /work }
+  volumes:
+    - name: work
+      persistentVolumeClaim:
+        claimName: engram-lm

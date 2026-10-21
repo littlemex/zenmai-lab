@@ -1,0 +1,18 @@
+resources:
+  - ../base
+patches:
+  - target:
+      kind: Job
+      name: engram-lm-train
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: engram-lm-smoke
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: POD_NAME
+            valueFrom: { fieldRef: { fieldPath: metadata.name } }
+          - { name: RUN_NAME, value: "smoke-{pod}" }
+          - { name: MAX_STEPS, value: "60" }
+          - { name: SEEDS, value: "1337" }

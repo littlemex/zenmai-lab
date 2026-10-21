@@ -1,0 +1,10 @@
+{
+  "model": {
+    "n_layer": 12,
+    "n_head": 8,
+    "d_model": 512,
+    "block_size": 512,
+    "engram_layer_ids": []
+  },
+  "train": {}
+}

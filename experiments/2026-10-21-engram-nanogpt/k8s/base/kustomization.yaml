@@ -1,0 +1,19 @@
+resources:
+  - pvc.yaml
+  - train-job.yaml
+configMapGenerator:
+  - name: engram-lm-code
+    files:
+      - init=../../engram_lm/__init__.py
+      - data=../../engram_lm/data.py
+      - engram=../../engram_lm/engram.py
+      - evaluate=../../engram_lm/evaluate.py
+      - model=../../engram_lm/model.py
+      - tokenizer=../../engram_lm/tokenizer.py
+      - train=../../engram_lm/train.py
+      - config-engram=../../configs/engram.json
+      - config-baseline=../../configs/baseline.json
+      - requirements=../../requirements.txt
+      - run=run.sh
+generatorOptions:
+  disableNameSuffixHash: false
