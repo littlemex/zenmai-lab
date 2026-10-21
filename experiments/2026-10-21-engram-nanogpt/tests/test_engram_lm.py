@@ -209,3 +209,110 @@ def test_training_windows_reach_the_end_of_the_file(tmp_path):
     np.arange(11, dtype=np.uint16).tofile(tmp_path / "t.bin")
     x, y = TokenFile(tmp_path / "t.bin").batch(64, 10, np.random.default_rng(0), "cpu")
     assert x.shape == (64, 10) and bool((y[:, -1] == 10).all())  # the only valid window, 0..10
+
+
+def save_pair(token_map, path, baseline_seed=1):
+    torch.manual_seed(0)
+    engram = GPT(small_config(), *token_map, EOT_ID)
+    torch.manual_seed(0)
+    baseline = GPT(small_config(engram_layer_ids=[]))
+    for name, model, seed in (("engram", engram, 1), ("baseline", baseline, baseline_seed)):
+        torch.save({"model": model.state_dict(), "config": model.config.to_dict(), "step": 7, "val_loss": 0.5,
+                    "seed": seed}, path / f"{name}.pt")
+    return engram
+
+
+def test_record_trace_holds_every_variant(token_map, tmp_path):
+    import torch.nn.functional as F
+    from engram_lm.record_trace import record
+
+    engram = save_pair(token_map, tmp_path).eval()
+    trace = record(tmp_path / "engram.pt", tmp_path / "baseline.pt", "The cat sat on the mat", 5, 3, "t")
+    n = len(trace["tokens"])
+    ids = [t["id"] for t in trace["tokens"]]
+    prompt = trace["generation"]["prompt_tokens"]
+    with torch.no_grad():
+        # greedy: each generated token is the Engram model's argmax on its prefix
+        assert all(int(engram(torch.tensor([ids[:t]]))[0][0, -1].argmax()) == ids[t] for t in range(prompt, n))
+        rec = {}
+        final = F.log_softmax(engram(torch.tensor([ids]), record=rec)[0].float()[0], dim=-1)
+        block0 = F.log_softmax(engram.lm_head(engram.ln_f(rec["hidden"][0])).float()[0], dim=-1)
+    kl = F.kl_div(block0, final, log_target=True, reduction="none").sum(-1)  # KL(final || block 0)
+    on = trace["lens"]["values"]["engram"]
+    assert all(abs(on[t][0]["kl"] - float(kl[t])) < 1e-4 for t in range(n))
+    # p_next is the probability of the token at t + 1: at a generated position it is the final top-1
+    for t in range(prompt - 1, n - 1):
+        assert on[t][-1]["top"][0][0] == ids[t + 1] and on[t][-1]["p_next"] == on[t][-1]["top"][0][1]
+    assert trace["generation"]["new_tokens"] == 5 and n == trace["generation"]["prompt_tokens"] + 5
+    lens = trace["lens"]
+    assert [v["name"] for v in lens["variants"]] == ["engram", "engram_off", "baseline"]
+    for name in ("engram", "engram_off", "baseline"):
+        values = lens["values"][name]
+        assert len(values) == n and all(len(blocks) == 3 for blocks in values)
+        assert all(len(b["top"]) == 3 and abs(b["kl"]) < 1e-6 for b in (blocks[-1] for blocks in values))
+        assert values[-1][0]["p_next"] is None and values[0][0]["p_next"] is not None
+    # skipping Engram changes what blocks 1 and up predict, not block 0 (p_final and kl differ even
+    # there, because they compare with each variant's own final prediction)
+    off = lens["values"]["engram_off"]
+    own = lambda b: (b["top"], b["p_next"])  # noqa: E731
+    assert all(own(on[t][0]) == own(off[t][0]) for t in range(n))
+    assert any(own(on[t][1]) != own(off[t][1]) for t in range(n))
+    assert len(trace["gates"]) == n and all(0 < g[0][0] < 1 for g in trace["gates"])
+    layer = trace["layers"][0]
+    assert all(c["offset"] <= r < c["offset"] + c["size"] for rows in trace["hash_rows"] for r, c in zip(rows[0], layer["columns"]))
+    assert all(str(i) in lens["vocab"] for blocks in on for b in blocks for i, _ in b["top"])
+
+
+def test_record_trace_refuses_checkpoints_that_are_not_a_pair(token_map, tmp_path):
+    from engram_lm.record_trace import record
+
+    save_pair(token_map, tmp_path, baseline_seed=2)
+    with pytest.raises(ValueError, match="seeds differ"):
+        record(tmp_path / "engram.pt", tmp_path / "baseline.pt", "The cat", 1, 3, "t")
+
+
+def test_export_reads_back_as_the_same_model(token_map, tmp_path):
+    from engram_lm.evaluate import load
+    from engram_lm.export import export
+
+    save_pair(token_map, tmp_path)
+    export(tmp_path / "engram.pt", tmp_path / "model.safetensors")
+    a, state_a = load(tmp_path / "engram.pt", "cpu")
+    b, state_b = load(tmp_path / "model.safetensors", "cpu")
+    assert {k: state_a[k] for k in ("config", "step", "seed", "val_loss")} == state_b
+    assert b.lm_head.weight is b.wte.weight
+    x = torch.randint(0, 100, (1, 12))
+    with torch.no_grad():
+        assert torch.equal(a(x)[0], b(x)[0])
+
+
+def test_settling_matches_the_definition_and_counts_every_position(token_map, tmp_path):
+    from engram_lm.data import TokenFile
+    from engram_lm.settling import run, settle
+
+    engram = save_pair(token_map, tmp_path).eval()
+    block = engram.config.block_size
+    x = torch.randint(0, 1000, (block,))
+    out = settle(engram, x, False, "cpu")
+    settled, final, p = out["settled"], out["final"], out["p"]
+    rec = {}
+    with torch.no_grad():
+        engram(x.unsqueeze(0), record=rec)
+        tops = [engram.lm_head(engram.ln_f(h))[0].argmax(-1) for h in rec["hidden"]]
+    for t in range(block):
+        k = len(tops) - 1
+        while k > 0 and tops[k - 1][t] == tops[-1][t]:
+            k -= 1
+        assert int(settled[t]) == k and int(final[t]) == int(tops[-1][t]) and 0 < float(p[t]) <= 1
+        assert torch.isclose(out["p_last"][t], engram.lm_head(engram.ln_f(rec["hidden"][-1]))[0, t].softmax(-1).max())
+    np.random.default_rng(0).integers(0, 1000, block * 3 + 1).astype(np.uint16).tofile(tmp_path / "val.bin")
+    result = run(tmp_path / "engram.pt", tmp_path / "baseline.pt", TokenFile(tmp_path / "val.bin"), None, "cpu")
+    assert result["positions"] == block * 3
+    assert all(sum(v["settled_block_histogram"]) == block * 3 for v in result["variants"].values())
+    pair = result["pairs"]["engram/baseline"]["all"]
+    assert pair["sooner"] + pair["later"] + pair["same"] == block * 3
+    # an untrained model is rarely right, so the both-right subset can be empty; its averages are then None
+    right = result["pairs"]["engram/baseline"]["both_end_on_next_token"]
+    assert right["positions"] > 0 or right["blocks_above"] == [None, None]
+    with pytest.raises(ValueError, match="first model must have Engram"):
+        run(tmp_path / "baseline.pt", tmp_path / "engram.pt", TokenFile(tmp_path / "val.bin"), None, "cpu")

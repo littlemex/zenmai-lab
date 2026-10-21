@@ -14,6 +14,8 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
+from safetensors import safe_open
+from safetensors.torch import load_model
 
 from .data import TokenFile
 from .model import ModelConfig
@@ -21,10 +23,33 @@ from .train import build_model
 
 
 def load(checkpoint: Path, device: str):
-    state = torch.load(checkpoint, map_location="cpu", weights_only=True)
-    model = build_model(ModelConfig(**state["config"]))
-    model.load_state_dict(state["model"])
+    """A training checkpoint (ckpt.pt) or its published form (model.safetensors, see export.py)."""
+    if checkpoint.suffix == ".safetensors":
+        with safe_open(checkpoint, "pt") as f:
+            meta = f.metadata()
+        state = {"config": json.loads(meta["config"]), "step": int(meta["step"]), "seed": int(meta["seed"]),
+                 "val_loss": float(meta["val_loss"])}
+        model = build_model(ModelConfig(**state["config"]))
+        load_model(model, checkpoint)
+    else:
+        state = torch.load(checkpoint, map_location="cpu", weights_only=True)
+        model = build_model(ModelConfig(**state["config"]))
+        model.load_state_dict(state["model"])
     return model.to(device).eval(), state
+
+
+def load_pair(engram_path: Path, baseline_path: Path, device: str):
+    """An Engram model and the baseline of the same seed, refused unless they differ only in Engram."""
+    engram, engram_state = load(engram_path, device)
+    baseline, baseline_state = load(baseline_path, device)
+    if not engram.engrams or baseline.engrams:
+        raise ValueError("the first model must have Engram and the second must not")
+    backbone = lambda config: {k: v for k, v in config.items() if not k.startswith("engram_")}  # noqa: E731
+    if backbone(engram_state["config"]) != backbone(baseline_state["config"]):
+        raise ValueError("the two models differ outside Engram, so they are not a pair")
+    if engram_state.get("seed") != baseline_state.get("seed"):
+        raise ValueError(f"seeds differ: {engram_state.get('seed')} and {baseline_state.get('seed')}")
+    return engram, engram_state, baseline, baseline_state
 
 
 @torch.no_grad()

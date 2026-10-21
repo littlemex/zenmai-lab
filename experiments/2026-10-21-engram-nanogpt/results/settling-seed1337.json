@@ -1,0 +1,135 @@
+{
+  "data": "val.bin",
+  "seed": 1337,
+  "files": {
+    "engram": "8463fc495c0d07a2653359f1c5d436cca6e11bee66d52266f8cfd8702447e6b3",
+    "baseline": "a005dfb5a12691995119957b8e3bb7ce77871f4e9b668f4f4e7d48b9bd118404"
+  },
+  "commit": null,
+  "positions": 247296,
+  "n_layer": 12,
+  "variants": {
+    "engram": {
+      "mean_settled_block": 6.244811885351967,
+      "settled_block_histogram": [
+        23712,
+        32787,
+        12665,
+        11302,
+        11406,
+        12928,
+        14541,
+        11997,
+        12973,
+        16180,
+        33454,
+        53351
+      ],
+      "median_top1_probability_at_settled_block": 0.3194071650505066,
+      "median_top1_probability_at_last_block": 0.31759288907051086,
+      "final_top1_is_next_token": 0.4015430900621118
+    },
+    "engram_off": {
+      "mean_settled_block": 6.919768212991719,
+      "settled_block_histogram": [
+        25377,
+        17118,
+        10320,
+        11754,
+        9416,
+        12953,
+        12267,
+        13361,
+        14404,
+        16084,
+        37997,
+        66245
+      ],
+      "median_top1_probability_at_settled_block": 0.3123670518398285,
+      "median_top1_probability_at_last_block": 0.2385326623916626,
+      "final_top1_is_next_token": 0.30977047748447206
+    },
+    "baseline": {
+      "mean_settled_block": 7.10940330615942,
+      "settled_block_histogram": [
+        22398,
+        10935,
+        8522,
+        10298,
+        9927,
+        16408,
+        15650,
+        18090,
+        17197,
+        21819,
+        33543,
+        62509
+      ],
+      "median_top1_probability_at_settled_block": 0.3331327438354492,
+      "median_top1_probability_at_last_block": 0.3005453944206238,
+      "final_top1_is_next_token": 0.3985871182712215
+    }
+  },
+  "pairs": {
+    "engram/baseline": {
+      "all": {
+        "positions": 247296,
+        "sooner": 119870,
+        "later": 61108,
+        "same": 66318,
+        "blocks_above": [
+          4.755188114648033,
+          3.8905966938405796
+        ],
+        "median_top1_probability_at_settled_block_where_sooner": [
+          0.3539958894252777,
+          0.36450135707855225
+        ]
+      },
+      "both_end_on_next_token": {
+        "positions": 86975,
+        "sooner": 47862,
+        "later": 16928,
+        "same": 22185,
+        "blocks_above": [
+          6.694050014371946,
+          5.458120149468238
+        ],
+        "median_top1_probability_at_settled_block_where_sooner": [
+          0.3953951597213745,
+          0.48132991790771484
+        ]
+      }
+    },
+    "engram/engram_off": {
+      "all": {
+        "positions": 247296,
+        "sooner": 99158,
+        "later": 58972,
+        "same": 89166,
+        "blocks_above": [
+          4.755188114648033,
+          4.080231787008281
+        ],
+        "median_top1_probability_at_settled_block_where_sooner": [
+          0.34552520513534546,
+          0.28501635789871216
+        ]
+      },
+      "both_end_on_next_token": {
+        "positions": 68336,
+        "sooner": 26827,
+        "later": 9084,
+        "same": 32425,
+        "blocks_above": [
+          6.781125614610161,
+          5.750439007258254
+        ],
+        "median_top1_probability_at_settled_block_where_sooner": [
+          0.3822830319404602,
+          0.44355884194374084
+        ]
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ legacy/physical-ai/     the earlier Physical AI lab layout (EC2 and Slurm helper
 |---|---|
 | [`experiments/2026-06-06-isaac-lab-bench`](experiments/2026-06-06-isaac-lab-bench) | Isaac Lab's RSL-RL benchmark on GPU instances: throughput, GPU use and PhysX ablations |
 | [`experiments/2026-10-21-engram-nanogpt`](experiments/2026-10-21-engram-nanogpt) | A small GPT trained with and without an Engram layer that hashes like DeepSeek-V4.1-Flash |
-| [`experiments/2026-10-21-engram-trace-viewer`](experiments/2026-10-21-engram-trace-viewer) | A static 3D viewer of Engram's n-gram lookups, with a recorder that uses the model's own hashing |
+| [`experiments/2026-10-21-engram-trace-viewer`](experiments/2026-10-21-engram-trace-viewer) | A static viewer of Engram's n-gram lookups, with a recorder that uses the model's own hashing, and a ladder view of the block at which each prediction settles, with and without Engram |
 
 ## Adding an experiment
 

@@ -189,3 +189,120 @@ def test_opening_a_local_file_is_not_shared_as_the_old_trace(page):
         assert key not in page.url
     expect(page.locator("#catalog")).to_contain_text("tokyo-japanese.json (local file)")
     assert page.errors == []
+
+
+LADDER = json.loads((VIEWER / "traces/nanogpt-hastings.json").read_text())
+
+
+def settled_block(blocks):
+    final = blocks[-1]["top"][0][0]
+    k = len(blocks) - 1
+    while k > 0 and blocks[k - 1]["top"][0][0] == final:
+        k -= 1
+    return k
+
+
+def test_the_ladder_trace_matches_the_schema():
+    import jsonschema
+
+    jsonschema.validate(LADDER, json.loads((VIEWER / "schema/engram-trace.schema.json").read_text()))
+
+
+def test_the_ladder_summary_is_the_traces_own_count(page):
+    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram&b=baseline")
+    expect(page.locator("#summary .stat").first).to_be_visible()
+    lens = LADDER["lens"]
+    n = len(LADDER["tokens"]) - 1
+    sa = [settled_block(b) for b in lens["values"]["engram"][:n]]
+    sb = [settled_block(b) for b in lens["values"]["baseline"][:n]]
+    final = lambda name, t: lens["values"][name][t][-1]["top"][0][0]  # noqa: E731
+    nxt = [token["id"] for token in LADDER["tokens"][1:]]
+    right = [t for t in range(n) if final("engram", t) == nxt[t] == final("baseline", t)]
+
+    def line(title, positions):
+        sooner = sum(sa[t] < sb[t] for t in positions)
+        later = sum(sa[t] > sb[t] for t in positions)
+        above = lambda s: sum(lens["n_layer"] - 1 - s[t] for t in positions) / len(positions)  # noqa: E731
+        return (f"{title} ({len(positions)}): with Engram settles sooner at {sooner}, later at {later}, same at "
+                f"{len(positions) - sooner - later}; blocks above the settled one, on average {above(sa):.2f} against {above(sb):.2f}")
+
+    stats = page.locator("#summary .stat").all_inner_texts()
+    assert stats == [line("all positions", range(n)), line("both end on the actual next token", right)]
+    assert page.locator(".chart .col").count() == n
+    assert page.errors == []
+
+
+def test_the_ladder_shows_every_block_of_one_position(page):
+    t = next(i for i, token in enumerate(LADDER["tokens"][:-1]) if token["text"] == " Sax")
+    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram&b=baseline&t={t}")
+    expect(page.locator(".focus-text")).to_have_text("·Sax → on")
+    lens = LADDER["lens"]
+    for column, name in enumerate(["engram", "baseline"]):
+        blocks = lens["values"][name][t]
+        col = page.locator(".ladder-col").nth(column)
+        words = col.locator(".rung-word").all_inner_texts()
+        texts = [lens["vocab"][str(blocks[k]["top"][0][0])] for k in range(lens["n_layer"] - 1, -1, -1)]
+        expected = ["·" + text[1:] if text.startswith(" ") else text for text in texts]
+        assert words == expected
+        pct = lambda p: f"{100 * p:.{0 if p >= 0.1 else 1}f} %"  # noqa: E731
+        assert col.locator(".rung-p").all_inner_texts() == [pct(blocks[k]["top"][0][1]) for k in range(lens["n_layer"] - 1, -1, -1)]
+        expect(col.locator(".rung.settles .rung-block")).to_have_text(str(settled_block(blocks)))
+    gate = LADDER["gates"][t][0][0]
+    expect(page.locator(".ladder-col").nth(0).locator(".rung-engram")).to_have_text(f"Engram added, gate {gate:.2f}")
+    expect(page.locator(".ladder-col").nth(1).locator(".rung-engram")).to_have_text("no Engram")
+    assert page.errors == []
+
+
+def test_the_ladder_steps_and_keeps_the_view_in_the_url(page):
+    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json&a=engram_off&b=engram&t=3")
+    expect(page.locator("#where")).to_have_text(f"3 / {len(LADDER['tokens']) - 2}")
+    page.click("#next")
+    expect(page.locator("#where")).to_have_text(f"4 / {len(LADDER['tokens']) - 2}")
+    expect(page.locator("#a")).to_have_value("engram_off")
+    assert "t=4" in page.url and "a=engram_off" in page.url and "b=engram" in page.url
+    page.select_option("#b", "baseline")
+    assert "b=baseline" in page.url
+    assert page.errors == []
+
+
+@pytest.mark.parametrize("tops, expected", [
+    ([1, 1, 1, 1], 0),
+    ([2, 1, 1, 1], 1),
+    ([1, 2, 1, 1], 2),  # matches the final answer at block 0, changes, then comes back
+    ([1, 1, 1, 2], 3),
+])
+def test_a_prediction_settles_where_its_top_1_stops_changing(page, tops, expected):
+    page.goto(f"{page.base}/ladder.html?trace=traces/nanogpt-hastings.json")
+    blocks = [{"top": [[i, 0.5]]} for i in tops]
+    assert page.evaluate("async (b) => (await import('./js/ladder.js')).settledBlock(b)", blocks) == expected
+    assert settled_block(blocks) == expected
+
+
+@pytest.mark.parametrize("break_it, message", [
+    (lambda tr: tr["lens"]["values"]["engram"].pop(), "lens.values.engram has 83 positions, tokens has 84"),
+    (lambda tr: tr["lens"]["values"]["baseline"][4].pop(), "lens.values.baseline[4] has 11 blocks, expected 12"),
+    (lambda tr: tr["lens"]["values"]["engram"][2][3].__setitem__("top", []), "lens.values.engram[2][3] has no top-1 token"),
+    (lambda tr: tr["lens"]["variants"].append(dict(tr["lens"]["variants"][0])), "must name each variant once"),
+    (lambda tr: tr["lens"]["values"]["engram"][5][2].__setitem__("p_final", None), "lens.values.engram[5][2] needs a top-1 probability"),
+    (lambda tr: tr["lens"].__setitem__("n_layer", 0), "lens.n_layer must be a positive integer"),
+])
+def test_a_broken_lens_says_what_is_wrong(page, break_it, message):
+    broken = copy.deepcopy(LADDER)
+    break_it(broken)
+    page.route("**/traces/broken.json", lambda route: route.fulfill(json=broken))
+    page.goto(f"{page.base}/ladder.html?trace=traces/broken.json")
+    expect(page.locator("#error")).to_contain_text(message)
+    page.click("#next")
+    assert page.errors == []
+
+
+def test_the_ladder_says_a_trace_without_lens_is_for_the_table_view(page):
+    page.goto(f"{page.base}/ladder.html?trace=traces/alexander-the-great.json")
+    expect(page.locator("#error")).to_contain_text('has no "lens" field')
+
+
+def test_the_table_view_opens_the_ladder_trace(page):
+    page.goto(f"{page.base}/index.html?trace=traces/nanogpt-hastings.json")
+    rows = table_rows(page)
+    assert len(rows) == sum(len(layer["columns"]) for layer in LADDER["layers"][:1])
+    assert page.errors == []

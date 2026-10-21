@@ -1,0 +1,38 @@
+resources:
+  - ../base
+configMapGenerator:
+  - name: engram-lm-code
+    behavior: merge
+    files:
+      - settling=../../engram_lm/settling.py
+      - record-trace=../../engram_lm/record_trace.py
+      - settle=settle.sh
+patches:
+  - target:
+      kind: Job
+      name: engram-lm-train
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: engram-lm-settling
+      - op: replace
+        path: /spec/template/spec/containers/0/command
+        value: ["bash", "/code/settle.sh"]
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - { name: SEEDS, value: "1337 1338 1339" }
+          - { name: HF_REPO, value: littlemex/engram-nanogpt-wikitext103 }
+          - { name: HF_REVISION, value: e9758158ad0d180336bc059e20fecf29f67f445b }
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/nvidia.com~1gpu
+        value: 1
+      - op: add
+        path: /spec/template/spec/volumes/0/configMap/items/-
+        value: { key: settling, path: engram_lm/settling.py }
+      - op: add
+        path: /spec/template/spec/volumes/0/configMap/items/-
+        value: { key: record-trace, path: engram_lm/record_trace.py }
+      - op: add
+        path: /spec/template/spec/volumes/0/configMap/items/-
+        value: { key: settle, path: settle.sh }

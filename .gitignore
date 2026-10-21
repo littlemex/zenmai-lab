@@ -34,3 +34,6 @@ __pycache__/
 # results that an experiment's README cites
 !experiments/2026-10-21-engram-nanogpt/results/*.json
 !experiments/2026-10-21-engram-nanogpt/results/*.png
+# runs copied from the cluster and models downloaded from Hugging Face
+experiments/2026-10-21-engram-nanogpt/runs/
+experiments/2026-10-21-engram-nanogpt/hub/

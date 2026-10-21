@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "engram-trace.schema.json",
   "title": "engram-trace v1",
-  "description": "The Engram n-gram lookups of one token sequence. hash_rows is required; gates are optional, and a viewer shows them only when present.",
+  "description": "The Engram n-gram lookups of one token sequence. hash_rows is required; gates, generation and lens are optional, and a viewer shows them only when present.",
   "type": "object",
   "required": [
     "format",
@@ -205,6 +205,159 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1
+          }
+        }
+      }
+    },
+    "generation": {
+      "description": "Optional. How the tokens were produced: the first prompt_tokens were given, the rest generated.",
+      "type": "object",
+      "required": [
+        "prompt_tokens"
+      ],
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "new_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "by": {
+          "type": "string",
+          "description": "The lens variant that generated the tokens."
+        },
+        "method": {
+          "type": "string"
+        }
+      }
+    },
+    "lens": {
+      "description": "Optional. LogitLens of one or more model variants over the same tokens: what each block's residual stream predicts as the next token. The ladder view needs it.",
+      "type": "object",
+      "required": [
+        "n_layer",
+        "variants",
+        "vocab",
+        "values"
+      ],
+      "properties": {
+        "n_layer": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "engram_before_block": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Blocks the Engram output is added in front of."
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "label"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "checkpoint_step": {
+                "type": "integer"
+              },
+              "engram": {
+                "enum": [
+                  "added",
+                  "skipped",
+                  "absent"
+                ],
+                "description": "What the variant does at engram_before_block: adds the Engram output (gates belong to this variant), skips it, or has no Engram layer."
+              }
+            }
+          }
+        },
+        "vocab": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Text of every token id that appears in a top list, keyed by the id as a string."
+        },
+        "values": {
+          "type": "object",
+          "description": "Variant name -> [position][block].",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "top",
+                  "p_final",
+                  "kl"
+                ],
+                "properties": {
+                  "top": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      ],
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "description": "The top-k [token id, probability], most probable first."
+                  },
+                  "p_final": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "The probability this block gives to the variant's own final top-1 token."
+                  },
+                  "p_next": {
+                    "oneOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The probability of the actual next token; null at the last position."
+                  },
+                  "kl": {
+                    "type": "number",
+                    "minimum": -0.001,
+                    "description": "KL(final || this block), in nats."
+                  }
+                }
+              }
+            }
           }
         }
       }

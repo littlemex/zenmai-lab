@@ -23,7 +23,27 @@ The Engram model learns much faster at first: at step 400 (26M tokens) its valid
 
 ![KL from the final distribution to the LogitLens distribution after each block, mean and sd over three seeds on a log scale; block 11 is left out because its KL is zero by definition](results/logit-lens-kl.png)
 
-The trained Engram model depends on its lookup: skipping it doubles validation perplexity, from 28.97 to 59.54. Its intermediate predictions are also closer to its final one from the block where Engram is added onward: after block 1 the KL to the final distribution is 2.91 against 3.94 for the baseline, and the Engram model stays lower through block 10. After block 0, before Engram is added, it is higher (5.04 against 4.01). This is consistent with the paper's reading, that Engram takes over the early composition of local patterns so the backbone reaches a prediction-ready representation in fewer blocks, but it does not establish it: the KL measures how close each model is to its own final distribution, which shows where each model settles, not what Engram supplies or which model predicts better.
+The trained Engram model depends on its lookup: skipping it doubles validation perplexity, from 28.97 to 59.54. Its intermediate predictions are also closer to its final one from the block where Engram is added onward: after block 1 the KL to the final distribution is 2.91 against 3.94 for the baseline, and the Engram model stays lower through block 10. After block 0, before Engram is added, it is higher (5.04 against 4.01). This is consistent with the paper's reading, that Engram takes over the early composition of local patterns so the backbone reaches a prediction-ready representation in fewer blocks, but it does not establish it: the KL measures how close each model's intermediate distribution is to its own final one, not what Engram supplies or which model predicts better. The next section counts a different quantity, the block from which the top-1 stops changing.
+
+### Where predictions settle
+
+[`engram_lm/settling.py`](engram_lm/settling.py) counts, for every position of the 483 full 512-token windows of the validation split (247,296 positions per seed; each window starts with no history, as in evaluation), the block from which the LogitLens top-1 equals the final top-1 and stays equal up to the last block. It does so for the Engram model, the same weights with Engram skipped, and the baseline of the same seed, using the published models at a pinned revision. `results/settling.json` holds the values below, mean over the three seeds with the per-seed values beside them, and the SHA-256 of every model file used.
+
+![Share of validation positions by the block from which the top-1 prediction no longer changes, mean and sd over three seeds](results/settling.png)
+
+| | With Engram | Engram skipped | Baseline |
+|---|---|---|---|
+| Positions that settle at block 1, the first block after the Engram layer in the Engram model | 14.5% | 8.7% | 4.8% |
+| Mean settled block | 6.27 | 6.91 | 7.04 |
+| Median top-1 probability at the settled block | 0.32 | 0.31 | 0.33 |
+| Median top-1 probability at the last block | 0.32 | 0.24 | 0.30 |
+| Final top-1 is the next token | 40.2% | 30.8% | 39.8% |
+
+Against the baseline of the same seed, the Engram model settles at an earlier block at 46.4% of positions and at a later one at 26.1%. Over the positions where both models end on the token that actually comes next, 52.1% against 21.5%, with 6.64 blocks above the settled one on average against 5.54. The three seeds agree: earlier at 48.5%, 48.1% and 42.6% of all positions.
+
+Earlier is not the same as surer. Over the positions where both end on the next token and the Engram model settles sooner, the median top-1 probability at the Engram model's earlier settled block is 0.39, and at the baseline's later settled block 0.48. The count says where the top-1 stops changing, not where computation could stop: the blocks above still run and still change the probabilities.
+
+With the lookup skipped, the same weights settle later (6.91) and end on the next token less often (30.8%). They still settle at block 1 more often than the baseline (8.7% against 4.8%), but their final answer is also worse, so this does not by itself say where the earlier settling comes from. Skipping a layer the model was trained with is also outside the conditions it was trained in.
 
 ## The model
 
@@ -80,9 +100,36 @@ kubectl -n "$NAMESPACE" delete pod engram-lm-fetch
 uv run --python 3.11 --with numpy --with matplotlib python scripts/summarize.py --run-dir runs/wikitext103-3seeds --out-dir results
 ```
 
-The copy leaves out the checkpoints, about 4.7 GB for the six runs; `summarize.py` needs only the metrics and evaluations. A checkpoint can be copied the same way one file at a time when it is needed.
+The copy leaves out the checkpoints, about 4.7 GB for the six runs; `summarize.py` needs only the metrics and evaluations. The trained models are also on Hugging Face (next section).
+
+`k8s/settling` runs the settling count of the previous section on one GPU. It downloads the published models of each seed from Hugging Face, tokenises WikiText-103 onto the PersistentVolumeClaim unless the training Job already did, and writes `/work/settling/settling-seed<seed>.json` for each seed in its `SEEDS`:
+
+```bash
+export NAMESPACE=default
+kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/settling | kubectl apply -n "$NAMESPACE" -f -
+kubectl -n "$NAMESPACE" wait --for=condition=complete job/engram-lm-settling --timeout=1h
+kubectl -n "$NAMESPACE" apply -f k8s/fetch-pod.yaml
+kubectl -n "$NAMESPACE" wait --for=condition=ready pod/engram-lm-fetch --timeout=5m
+kubectl -n "$NAMESPACE" exec engram-lm-fetch -- tar cf - -C /work/settling . | tar xf - -C results
+kubectl -n "$NAMESPACE" delete pod engram-lm-fetch
+uv run --python 3.11 --with numpy --with matplotlib python scripts/plot_settling.py results/settling-seed*.json --out-dir results
+```
 
 `k8s/smoke` trains 60 steps with one seed to check the setup end to end. Each run writes to `/work/runs/$RUN_NAME`, and an existing run directory is refused, so a second full run needs another `RUN_NAME` in `k8s/base/train-job.yaml`. The smoke run's `RUN_NAME` is `smoke-{pod}`, which becomes the pod's name, so it can be repeated. A finished Job must be deleted before the same Job name is applied again. A failed run is not resumed but rerun into a new directory.
+
+## Record a trace for the viewer
+
+`engram_lm.record_trace` writes the input of the [Engram trace viewer](../2026-10-21-engram-trace-viewer/)'s ladder view from an Engram checkpoint and the baseline checkpoint of the same seed. The Engram model continues the prompt greedily, and then three variants read the same tokens: the Engram model, the same weights with the Engram layer skipped, and the baseline. For every position and block the trace holds the LogitLens top-5, the probability the block gives to the variant's own final prediction and to the actual next token (none at the last position), and KL(final ‖ block); it also holds the Engram model's row ids and gates, so the table view opens it too. It runs on a CPU in under a minute.
+
+The six trained models are published as [littlemex/engram-nanogpt-wikitext103](https://huggingface.co/littlemex/engram-nanogpt-wikitext103) on Hugging Face, one folder per run, each with `model.safetensors`, `config.json`, `eval.json` and `metrics.jsonl`. `engram_lm.export` writes `model.safetensors` from `ckpt.pt` with the model config, step, seed and validation loss in its metadata, and `evaluate.load` reads either form. To record from the published models, from this directory:
+
+```bash
+export SEED=1337
+uv run --python 3.11 --with-requirements requirements.txt hf download littlemex/engram-nanogpt-wikitext103 --revision e9758158ad0d180336bc059e20fecf29f67f445b --include "*-seed$SEED/model.safetensors" --local-dir hub
+uv run --python 3.11 --with-requirements requirements.txt python -m engram_lm.record_trace --engram hub/engram-seed$SEED/model.safetensors --baseline hub/baseline-seed$SEED/model.safetensors --prompt " The Battle of Hastings was fought on 14 October 1066 between the Norman @-@ French army of William , the Duke of Normandy , and an English army under the Anglo @-@ Saxon King Harold Godwinson" --new-tokens 40 --title "The Battle of Hastings (seed $SEED)" --out ../2026-10-21-engram-trace-viewer/viewer/traces/nanogpt-hastings.json
+```
+
+The prompt is written the way WikiText-103 is tokenised, with spaces around punctuation and `@-@` for a hyphen, so that it reads like the training text. The two files are about 530 MB and 255 MB. The recorder refuses two checkpoints whose seeds or backbones differ, and the trace records the seed, the SHA-256 of both files and the recorder's commit. Your own runs work the same way with `ckpt.pt` from the run directory.
 
 ## Layout
 
@@ -94,10 +141,13 @@ The copy leaves out the checkpoints, about 4.7 GB for the six runs; `summarize.p
 │   ├── model.py       the GPT, with Engram layers when configured
 │   ├── data.py        WikiText-103 to uint16 token files, training and evaluation windows
 │   ├── train.py       training loop
-│   └── evaluate.py    perplexity, Engram-off perplexity, LogitLens and gate statistics
+│   ├── evaluate.py    perplexity, Engram-off perplexity, LogitLens and gate statistics
+│   ├── export.py      ckpt.pt to model.safetensors, as published
+│   ├── settling.py    where predictions settle over a split, three variants of one seed
+│   └── record_trace.py  a trace of one text for the Engram trace viewer
 ├── configs/           engram.json and baseline.json, identical but for Engram
-├── k8s/               the training Job, its smoke variant and a pod to copy results out
-├── scripts/summarize.py
-├── results/           summary.json and figures of the reported run
+├── k8s/               the training Job, its smoke and settling variants, and a pod to copy results out
+├── scripts/           summarize.py (training results) and plot_settling.py (settling)
+├── results/           summary.json, settling.json (with the per-seed settling-seed*.json) and the figures
 └── tests/
 ```
