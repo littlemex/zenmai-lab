@@ -16,6 +16,10 @@ configMapGenerator:
       - config-soft5=../../configs/engram-soft5.json
       - config-cross=../../configs/engram-cross.json
       - config-cross-full=../../configs/engram-cross-full.json
+      - config-cross3=../../configs/engram-cross3.json
+      - config-cross4=../../configs/engram-cross4.json
+      - config-cross8=../../configs/engram-cross8.json
+      - config-cross-chunk=../../configs/engram-cross-chunk.json
       - config-engram=../../configs/engram.json
       - config-baseline=../../configs/baseline.json
       - requirements=../../requirements.txt

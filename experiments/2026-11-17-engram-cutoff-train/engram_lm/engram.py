@@ -131,14 +131,16 @@ class Engram(nn.Module):
     """One Engram layer: reads n_columns rows and adds the gated value to the residual stream."""
 
     def __init__(self, d_model: int, n_rows: int, n_columns: int, head_dim: int, norm_eps: float = 1e-6,
-                 cross_tables: bool = False, n_low_columns: int = 0):
+                 n_tables: int = 1, n_low_columns: int = 0):
         super().__init__()
         self.d_model = d_model
         self.n_low_columns = n_low_columns  # the 2-gram columns; the columns after them are the 3-gram ones
         self.table = nn.Embedding(n_rows, head_dim)
-        # cross tables: a second table, and each training position reads the table that does not learn
-        # from its half of the training text (see forward); evaluation reads the mean of the two
-        self.table_b = nn.Embedding(n_rows, head_dim) if cross_tables else None
+        # cross tables: n_tables > 1 splits the training text into n_tables parts and each training position
+        # reads only the tables that do not learn from its part (see read); evaluation reads the mean of all.
+        # The second table keeps its own name so the two-table checkpoints load unchanged.
+        self.table_b = nn.Embedding(n_rows, head_dim) if n_tables >= 2 else None
+        self.extra_tables = nn.ModuleList(nn.Embedding(n_rows, head_dim) for _ in range(max(0, n_tables - 2)))
         self.wkv = nn.Linear(n_columns * head_dim, 2 * d_model, bias=False)
         # two factors, as in the reference: only their product is used, but the factored form trains differently
         self.q_weight = nn.Parameter(torch.ones(d_model))
@@ -146,27 +148,33 @@ class Engram(nn.Module):
         self.eps = norm_eps
         self.clamp_value = 1e-6
         nn.init.normal_(self.table.weight, std=0.02)
-        if self.table_b is not None:
-            nn.init.normal_(self.table_b.weight, std=0.02)
+        for t in self.tables[1:]:
+            nn.init.normal_(t.weight, std=0.02)
 
-    def read(self, rows: torch.Tensor, half: torch.Tensor | None) -> torch.Tensor:
-        """[B, L, n_columns, head_dim]. half [B, L] bool, training only: True where the position's article
-        is in half B. A position in half A gets table B's values and sends its gradient to table A (and the
-        other way round), so a table is never read at a position it learns from."""
-        a = self.table(rows)
-        if self.table_b is None:
-            return a
-        b = self.table_b(rows)
-        if half is None:
-            return (a + b) / 2
-        m = half[..., None, None]
-        return torch.where(m, a.detach() + b - b.detach(), b.detach() + a - a.detach())
+    @property
+    def tables(self) -> list[nn.Embedding]:
+        return [self.table] + ([self.table_b] if self.table_b is not None else []) + list(self.extra_tables)
+
+    def read(self, rows: torch.Tensor, fold: torch.Tensor | None) -> torch.Tensor:
+        """[B, L, n_columns, head_dim]. fold [B, L] int64, training only: the part of the training text the
+        position's token is in. A position in part f gets the mean of the other tables' values and sends its
+        gradient to table f, so a table is never read at a position it learns from. Without fold (evaluation)
+        the mean of all tables is read."""
+        tables = self.tables
+        if len(tables) == 1:
+            return self.table(rows)
+        e = torch.stack([t(rows) for t in tables])  # [N, B, L, C, D]
+        if fold is None:
+            return e.mean(0)
+        own = torch.gather(e, 0, fold[None, ..., None, None].expand(1, *e.shape[1:]))[0]
+        others = (e.sum(0) - own) / (len(tables) - 1)
+        return others.detach() + own - own.detach()
 
     def forward(self, h: torch.Tensor, rows: torch.Tensor, return_gate: bool = False,
-                scale3: torch.Tensor | None = None, half: torch.Tensor | None = None):
+                scale3: torch.Tensor | None = None, fold: torch.Tensor | None = None):
         """h: [B, L, d]; rows: [B, L, n_columns] row ids into this layer's table. scale3 [B, L] multiplies
-        the 3-gram rows (the count cutoff); half selects the cross-table read during training."""
-        e = self.read(rows, half)
+        the 3-gram rows (the count cutoff); fold selects the cross-table read during training."""
+        e = self.read(rows, fold)
         if scale3 is not None:
             low = e[:, :, : self.n_low_columns]
             high = e[:, :, self.n_low_columns :] * scale3[..., None, None].to(e.dtype)

@@ -33,7 +33,14 @@ class ModelConfig:
     # training, c - 1 is used (leave-one-out), so a 3-gram seen once in training is treated as an unseen one.
     engram_cut_k: int = 0
     engram_cut_mode: str = "hard"
-    engram_cross_tables: bool = False
+    # cross tables: 0, 1 or false is one table; true is 2; an integer n splits the training text into n parts
+    # ("article": articles in turn, "chunk512": 512-token pieces of the token stream in turn) and keeps n tables
+    engram_cross_tables: int | bool = 0
+    engram_cross_split: str = "article"
+
+    @property
+    def n_cross_tables(self) -> int:
+        return 2 if self.engram_cross_tables is True else max(1, int(self.engram_cross_tables))
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -110,7 +117,7 @@ class GPT(nn.Module):
                 torch.random.default_generator.manual_seed(engram_seed)
                 for index, layer_id in enumerate(layout.layer_ids):
                     engram = Engram(config.d_model, sum(layout.primes[index]), layout.n_columns, config.engram_head_dim,
-                                    cross_tables=config.engram_cross_tables, n_low_columns=layout.n_heads)
+                                    n_tables=config.n_cross_tables, n_low_columns=layout.n_heads)
                     nn.init.normal_(engram.wkv.weight, mean=0.0, std=0.02)
                     self.engrams[str(layer_id)] = engram
 
@@ -121,7 +128,7 @@ class GPT(nn.Module):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def engram_parameters(self) -> list[nn.Parameter]:
-        return [t.weight for engram in self.engrams.values() for t in (engram.table, engram.table_b) if t is not None]
+        return [t.weight for engram in self.engrams.values() for t in engram.tables]
 
     def attach_counts(self, keys: np.ndarray, counts: np.ndarray) -> None:
         """The training-text 3-gram counts (counts.py) the cutoff reads; not part of the checkpoint."""
@@ -149,7 +156,7 @@ class GPT(nn.Module):
         raise ValueError(f"unknown engram_cut_mode {self.config.engram_cut_mode!r}")
 
     def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None, record: dict | None = None,
-                engram_off: bool = False, half: torch.Tensor | None = None):
+                engram_off: bool = False, fold: torch.Tensor | None = None):
         """record, when given, receives the residual stream after every block ("hidden", a list) and the
         gate of every Engram layer ("gates", by layer id), for analysis. engram_off skips the Engram
         layers of a trained model, to measure what they contribute."""
@@ -157,7 +164,7 @@ class GPT(nn.Module):
         x = self.drop(self.wte(idx) + self.wpe(torch.arange(t, device=idx.device)))
         rows = self.engram_hash(idx) if self.engram_hash is not None else None
         scale3 = self.cut_scale(idx) if rows is not None else None
-        half = half if self.training else None
+        fold = fold if self.training else None
         if record is not None:
             record.setdefault("hidden", [])
             record.setdefault("gates", {})
@@ -167,10 +174,10 @@ class GPT(nn.Module):
             if key in self.engrams and not engram_off:
                 index = self.config.engram_layer_ids.index(layer_id)
                 if record is not None:
-                    x, gate = self.engrams[key](x, rows[:, :, index], return_gate=True, scale3=scale3, half=half)
+                    x, gate = self.engrams[key](x, rows[:, :, index], return_gate=True, scale3=scale3, fold=fold)
                     record["gates"][layer_id] = gate
                 else:
-                    x = self.engrams[key](x, rows[:, :, index], scale3=scale3, half=half)
+                    x = self.engrams[key](x, rows[:, :, index], scale3=scale3, fold=fold)
             x = block(x)
             if record is not None:
                 record["hidden"].append(x)

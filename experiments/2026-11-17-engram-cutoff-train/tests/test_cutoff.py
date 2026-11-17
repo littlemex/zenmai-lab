@@ -30,17 +30,28 @@ def test_cutoff_and_cross_tables():
     with torch.no_grad():  # the 2-gram and 3-gram row ranges are disjoint, so this leaves the 2-gram rows alone
         e.table.weight[rows[0, :, 8:].flatten()] = 0
     assert torch.allclose(o1, e(h, rows)), "scale3 = 0 must equal reading zeros in the 3-gram rows"
-    # cross tables: gradient routing and eval mean
+    # cross tables, two: a position reads the other table and sends its gradient to its own
     mc = mk(engram_cross_tables=True); ec = mc.engrams["1"]
-    half = torch.zeros(1, 16, dtype=torch.bool); half[0, 8:] = True
+    fold = torch.zeros(1, 16, dtype=torch.long); fold[0, 8:] = 1
     r = mc.engram_hash(x)[:, :, 0]
-    out = ec.read(r, half); out.sum().backward()
+    out = ec.read(r, fold); out.sum().backward()
     a, b = ec.table.weight, ec.table_b.weight
     assert torch.allclose(out[0, :8], b.detach()[r[0, :8]]) and torch.allclose(out[0, 8:], a.detach()[r[0, 8:]])
     ga = torch.zeros_like(a); ga.index_add_(0, r[0, :8].flatten(), torch.ones(8 * r.shape[-1], a.shape[1]))
-    assert torch.allclose(a.grad, ga), "table A must get the gradient of the half-A positions only"
+    assert torch.allclose(a.grad, ga), "table A must get the gradient of the part-0 positions only"
     mc.eval(); assert torch.allclose(ec.read(r, None), (a[r] + b[r]) / 2)
-    # full forward in train mode with half, and the parameter list
-    mc.train(); _, loss = mc(x, x, half=half); loss.backward()
+    # cross tables, three: the mean of the two others, the gradient to the own table only
+    m3 = mk(engram_cross_tables=3); e3 = m3.engrams["1"]; t = [w.weight for w in e3.tables]
+    assert len(t) == 3 and len(m3.engram_parameters()) == 3
+    f3 = torch.tensor([[0] * 6 + [1] * 5 + [2] * 5])
+    out3 = e3.read(r, f3); out3.sum().backward()
+    for f in range(3):
+        pos = (f3[0] == f).nonzero().flatten()
+        oth = [t[g].detach()[r[0, pos]] for g in range(3) if g != f]
+        assert torch.allclose(out3[0, pos], (oth[0] + oth[1]) / 2)
+        g = torch.zeros_like(t[f]); g.index_add_(0, r[0, pos].flatten(), torch.ones(pos.numel() * r.shape[-1], t[f].shape[1]))
+        assert torch.allclose(t[f].grad, g), f"table {f} must get the gradient of part {f} only"
+    # full forward in train mode with folds, and the parameter list
+    mc.train(); _, loss = mc(x, x, fold=fold); loss.backward()
     assert len(mc.engram_parameters()) == 2
 

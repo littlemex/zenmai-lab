@@ -1,0 +1,17 @@
+{
+  "model": {
+    "n_layer": 12,
+    "n_head": 8,
+    "d_model": 512,
+    "block_size": 512,
+    "engram_layer_ids": [
+      1
+    ],
+    "engram_max_ngram_size": 3,
+    "engram_n_heads": 8,
+    "engram_rows_per_head": 16384,
+    "engram_head_dim": 64,
+    "engram_cross_tables": 4
+  },
+  "train": {}
+}

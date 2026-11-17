@@ -32,9 +32,14 @@ def load(data_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     return z["keys"], z["counts"]
 
 
-def article_halves(tokens: np.ndarray, eot_id: int) -> np.ndarray:
-    """uint8 per token: 1 where the token's article has an odd index. Articles are separated by <|endoftext|>."""
-    return (np.cumsum(tokens == eot_id) % 2).astype(np.uint8)
+def folds(tokens: np.ndarray, eot_id: int, n: int, split: str) -> np.ndarray:
+    """uint8 per token: the part of the training text it is in, 0..n-1. "article": articles in turn
+    (articles are separated by <|endoftext|>); "chunk512": 512-token pieces of the token stream in turn."""
+    if split == "article":
+        return (np.cumsum(tokens == eot_id) % n).astype(np.uint8)
+    if split == "chunk512":
+        return ((np.arange(len(tokens)) // 512) % n).astype(np.uint8)
+    raise ValueError(f"unknown engram_cross_split {split!r}")
 
 
 if __name__ == "__main__":

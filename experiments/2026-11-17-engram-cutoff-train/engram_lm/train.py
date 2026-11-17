@@ -108,12 +108,12 @@ def evaluate(model, data: TokenFile, block_size: int, windows: int | None, devic
     return float(np.mean(losses))
 
 
-def window_batch(tokens, halves, starts, block_size: int, device: str):
+def window_batch(tokens, folds, starts, block_size: int, device: str):
     x = np.stack([tokens[s : s + block_size] for s in starts]).astype(np.int64)
     y = np.stack([tokens[s + 1 : s + 1 + block_size] for s in starts]).astype(np.int64)
     to = lambda a: torch.from_numpy(a).to(device, non_blocking=True)  # noqa: E731
-    half = None if halves is None else to(np.stack([halves[s : s + block_size] for s in starts]).astype(bool))
-    return to(x), to(y), half
+    fold = None if folds is None else to(np.stack([folds[s : s + block_size] for s in starts]).astype(np.int64))
+    return to(x), to(y), fold
 
 
 def main() -> None:
@@ -145,9 +145,10 @@ def main() -> None:
     model = build_model(model_config).to(device)
     if model_config.engram_cut_k > 0:
         model.attach_counts(*count_table.load(args.data_dir))
-    halves = None
-    if model_config.engram_cross_tables:
-        halves = count_table.article_halves(np.asarray(train_data.tokens), EOT_ID)
+    folds = None
+    if model_config.n_cross_tables > 1:
+        folds = count_table.folds(np.asarray(train_data.tokens), EOT_ID, model_config.n_cross_tables,
+                                  model_config.engram_cross_split)
     counts = model.num_parameters()
     (args.out_dir / "config.json").write_text(json.dumps(
         {"model": model_config.to_dict(), "train": train, "data": meta, "parameters": counts}, indent=2))
@@ -172,9 +173,9 @@ def main() -> None:
         for _ in range(train["grad_accum"]):
             # the same draws as TokenFile.batch, so the windows match the runs without this change
             starts = generator.integers(0, len(train_data.tokens) - model_config.block_size, size=train["batch_size"])
-            x, y, half = window_batch(train_data.tokens, halves, starts, model_config.block_size, device)
+            x, y, fold = window_batch(train_data.tokens, folds, starts, model_config.block_size, device)
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=device == "cuda"):
-                _, loss = step_model(x, y, half=half)
+                _, loss = step_model(x, y, fold=fold)
             (loss / train["grad_accum"]).backward()
             total += loss.item() / train["grad_accum"]
         norms = clip(model, train["grad_clip"])

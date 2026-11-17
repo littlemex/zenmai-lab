@@ -1,0 +1,28 @@
+{
+  "checkpoint": "/work/runs/cross-n-seeds/engram-cross3-seed1339/ckpt.pt",
+  "step": 3599,
+  "trained_with": [
+    0,
+    "hard"
+  ],
+  "results": [
+    {
+      "k": 0,
+      "mode": "hard",
+      "val": 28.473087770887417,
+      "test": 28.47196808061793
+    },
+    {
+      "k": 5,
+      "mode": "hard",
+      "val": 28.45765120262694,
+      "test": 28.466776650419373
+    },
+    {
+      "k": 5,
+      "mode": "soft",
+      "val": 28.464069472044507,
+      "test": 28.46961374904266
+    }
+  ]
+}

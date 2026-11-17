@@ -18,17 +18,19 @@ spec:
             - name: POD_NAME
               valueFrom: { fieldRef: { fieldPath: metadata.name } }
             - name: RUN_NAME
-              value: cross-seeds
-            # <config>:<seed>, one GPU each; the first run (cutoff-train-s1337) was engram-cut5:1337 engram-soft5:1337 engram-cross:1337
+              value: cross-n-seeds
+            # <config>:<seed>, one GPU each. Earlier runs: cutoff-train-s1337 (engram-cut5:1337 engram-soft5:1337
+            # engram-cross:1337), cross-seeds (engram-cross:1338 engram-cross:1339 engram-cross-full:1337),
+            # cross-n (engram-cross3:1337 engram-cross4:1337 engram-cross8:1337 engram-cross-chunk:1337)
             - name: RUNS
-              value: "engram-cross:1338 engram-cross:1339 engram-cross-full:1337"
+              value: "engram-cross3:1338 engram-cross3:1339 engram-cross4:1338 engram-cross4:1339"
             - name: PRIOR_RUN
               value: wikitext103-3seeds
             - name: MAX_STEPS
               value: ""
           resources:
             limits:
-              nvidia.com/gpu: 3
+              nvidia.com/gpu: 4
             requests:
               cpu: "16"
               memory: 96Gi
@@ -54,6 +56,10 @@ spec:
               - { key: config-soft5, path: configs/engram-soft5.json }
               - { key: config-cross, path: configs/engram-cross.json }
               - { key: config-cross-full, path: configs/engram-cross-full.json }
+              - { key: config-cross3, path: configs/engram-cross3.json }
+              - { key: config-cross4, path: configs/engram-cross4.json }
+              - { key: config-cross8, path: configs/engram-cross8.json }
+              - { key: config-cross-chunk, path: configs/engram-cross-chunk.json }
               - { key: config-engram, path: configs/engram.json }
               - { key: config-baseline, path: configs/baseline.json }
               - { key: requirements, path: requirements.txt }
