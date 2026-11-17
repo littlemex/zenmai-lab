@@ -1,0 +1,24 @@
+resources:
+  - train-job.yaml
+configMapGenerator:
+  - name: engram-cut-code
+    files:
+      - init=../../engram_lm/__init__.py
+      - data=../../engram_lm/data.py
+      - engram=../../engram_lm/engram.py
+      - evaluate=../../engram_lm/evaluate.py
+      - model=../../engram_lm/model.py
+      - tokenizer=../../engram_lm/tokenizer.py
+      - train=../../engram_lm/train.py
+      - counts=../../engram_lm/counts.py
+      - eval-cut=../../engram_lm/eval_cut.py
+      - config-cut5=../../configs/engram-cut5.json
+      - config-soft5=../../configs/engram-soft5.json
+      - config-cross=../../configs/engram-cross.json
+      - config-cross-full=../../configs/engram-cross-full.json
+      - config-engram=../../configs/engram.json
+      - config-baseline=../../configs/baseline.json
+      - requirements=../../requirements.txt
+      - run=run.sh
+generatorOptions:
+  disableNameSuffixHash: false

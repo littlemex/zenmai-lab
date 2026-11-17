@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: engram-cut-train
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: train
+          image: pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime
+          command: ["bash", "/code/run.sh"]
+          env:
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: RUN_NAME
+              value: cross-seeds
+            # <config>:<seed>, one GPU each; the first run (cutoff-train-s1337) was engram-cut5:1337 engram-soft5:1337 engram-cross:1337
+            - name: RUNS
+              value: "engram-cross:1338 engram-cross:1339 engram-cross-full:1337"
+            - name: PRIOR_RUN
+              value: wikitext103-3seeds
+            - name: MAX_STEPS
+              value: ""
+          resources:
+            limits:
+              nvidia.com/gpu: 3
+            requests:
+              cpu: "16"
+              memory: 96Gi
+          volumeMounts:
+            - { name: code, mountPath: /code }
+            - { name: work, mountPath: /work }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - name: code
+          configMap:
+            name: engram-cut-code
+            items:
+              - { key: init, path: engram_lm/__init__.py }
+              - { key: data, path: engram_lm/data.py }
+              - { key: engram, path: engram_lm/engram.py }
+              - { key: evaluate, path: engram_lm/evaluate.py }
+              - { key: model, path: engram_lm/model.py }
+              - { key: tokenizer, path: engram_lm/tokenizer.py }
+              - { key: train, path: engram_lm/train.py }
+              - { key: counts, path: engram_lm/counts.py }
+              - { key: eval-cut, path: engram_lm/eval_cut.py }
+              - { key: config-cut5, path: configs/engram-cut5.json }
+              - { key: config-soft5, path: configs/engram-soft5.json }
+              - { key: config-cross, path: configs/engram-cross.json }
+              - { key: config-cross-full, path: configs/engram-cross-full.json }
+              - { key: config-engram, path: configs/engram.json }
+              - { key: config-baseline, path: configs/baseline.json }
+              - { key: requirements, path: requirements.txt }
+              - { key: run, path: run.sh }
+        - name: work
+          persistentVolumeClaim:
+            claimName: engram-lm
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 16Gi }

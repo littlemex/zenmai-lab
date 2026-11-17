@@ -1,0 +1,28 @@
+{
+  "checkpoint": "/work/runs/wikitext103-3seeds/engram-seed1339/ckpt.pt",
+  "step": 3599,
+  "trained_with": [
+    0,
+    "hard"
+  ],
+  "results": [
+    {
+      "k": 0,
+      "mode": "hard",
+      "val": 29.04174688853654,
+      "test": 29.239436821880954
+    },
+    {
+      "k": 5,
+      "mode": "hard",
+      "val": 28.402825329122642,
+      "test": 28.588536272137077
+    },
+    {
+      "k": 5,
+      "mode": "soft",
+      "val": 28.294602669422506,
+      "test": 28.478837847180575
+    }
+  ]
+}

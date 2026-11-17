@@ -1,0 +1,28 @@
+{
+  "checkpoint": "/work/runs/cutoff-train-s1337/engram-soft5-seed1337/ckpt.pt",
+  "step": 3599,
+  "trained_with": [
+    5,
+    "soft"
+  ],
+  "results": [
+    {
+      "k": 0,
+      "mode": "hard",
+      "val": 37.156024169752335,
+      "test": 38.2354369682711
+    },
+    {
+      "k": 5,
+      "mode": "hard",
+      "val": 28.845377549388896,
+      "test": 29.218284753743376
+    },
+    {
+      "k": 5,
+      "mode": "soft",
+      "val": 28.41582780773557,
+      "test": 28.795630788040462
+    }
+  ]
+}
