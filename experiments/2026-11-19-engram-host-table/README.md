@@ -39,7 +39,7 @@ Way A slows down with the address range the rows are spread over, not with the b
 
 ## Running it
 
-On a Linux machine with an NVIDIA GPU, its driver, a CUDA toolkit with `nvcc` under `/usr/local/cuda`, Python 3.10 or later and at least 24 GiB of free memory:
+On a Linux machine with an NVIDIA GPU, its driver, a CUDA toolkit with `nvcc` under `/usr/local/cuda`, Python 3.10 or later and at least 24 GiB of free memory. The extension is built by PyTorch with `ninja` and `nvcc`, both found through `PATH`:
 
 ```bash
 git clone https://github.com/littlemex/zenmai-lab.git
@@ -47,12 +47,12 @@ cd zenmai-lab/experiments/2026-11-19-engram-host-table
 python3 -m venv .venv
 .venv/bin/pip install -q -r ../2026-10-21-engram-nanogpt/requirements.txt ninja
 .venv/bin/hf download littlemex/engram-nanogpt-wikitext103 --revision e9758158ad0d180336bc059e20fecf29f67f445b --include "engram-seed1337/model.safetensors" --local-dir hub
-export PATH=/usr/local/cuda/bin:$PATH
-.venv/bin/python engram_host_table.py --zenmai-dir ../2026-10-21-engram-nanogpt --checkpoint hub/engram-seed1337/model.safetensors --out out/model-table-bf16.json --bf16 --big-rows 0
+export PATH=$PWD/.venv/bin:/usr/local/cuda/bin:$PATH
+python engram_host_table.py --zenmai-dir ../2026-10-21-engram-nanogpt --checkpoint hub/engram-seed1337/model.safetensors --out out/model-table-bf16.json --bf16 --big-rows 0
 sudo sysctl -q vm.nr_hugepages=4200
-.venv/bin/python engram_host_table_pages.py --out out/host-tables-256m-to-8g.json --sizes-mib 256,512,1024,2048,4096,8192 --tests sizes,pattern,stride,fresh --repeats 20
+python engram_host_table_pages.py --out out/host-tables-256m-to-8g.json --sizes-mib 256,512,1024,2048,4096,8192 --tests sizes,pattern,stride,fresh --repeats 20
 sudo sysctl -q vm.nr_hugepages=0
-.venv/bin/python engram_host_table_pages.py --out out/host-tables-16g.json --sizes-mib 16384 --tests sizes,fresh --modes gpu,cudaHostAlloc,register_4k,register_thp,cumem_host_numa,cpu_gather --repeats 20
+python engram_host_table_pages.py --out out/host-tables-16g.json --sizes-mib 16384 --tests sizes,fresh --modes gpu,cudaHostAlloc,register_4k,register_thp,cumem_host_numa,cpu_gather --repeats 20
 ```
 
 `engram_host_table.py` ends with `RESULT: OK` when every way of reading matches the table in GPU memory and the shifted-rows control does not. The hugetlbfs pages reserved for the 256 MiB to 8 GiB run are released before the 16 GiB run, which leaves `register_hugetlb` out because 16 GiB of hugetlbfs pages and a 16 GiB table in ordinary pages do not both fit in 32 GiB.
