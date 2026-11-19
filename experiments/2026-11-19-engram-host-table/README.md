@@ -49,10 +49,13 @@ python3 -m venv .venv
 .venv/bin/hf download littlemex/engram-nanogpt-wikitext103 --revision e9758158ad0d180336bc059e20fecf29f67f445b --include "engram-seed1337/model.safetensors" --local-dir hub
 export PATH=$PWD/.venv/bin:/usr/local/cuda/bin:$PATH
 python engram_host_table.py --zenmai-dir ../2026-10-21-engram-nanogpt --checkpoint hub/engram-seed1337/model.safetensors --out out/model-table-bf16.json --bf16 --big-rows 0
-sudo sysctl -q vm.nr_hugepages=4200
-python engram_host_table_pages.py --out out/host-tables-256m-to-8g.json --sizes-mib 256,512,1024,2048,4096,8192 --tests sizes,pattern,stride,fresh --repeats 20
-sudo sysctl -q vm.nr_hugepages=0
+sudo sysctl -q vm.compact_memory=1
+python engram_host_table_pages.py --out out/host-tables-256m-to-8g.json --sizes-mib 256,512,1024,2048,4096,8192 --tests sizes,pattern,stride,fresh --modes gpu,cudaHostAlloc,register_4k,register_thp,cumem_host_numa,cpu_gather --repeats 20
+sudo sysctl -q vm.compact_memory=1
 python engram_host_table_pages.py --out out/host-tables-16g.json --sizes-mib 16384 --tests sizes,fresh --modes gpu,cudaHostAlloc,register_4k,register_thp,cumem_host_numa,cpu_gather --repeats 20
+sudo sysctl -q vm.nr_hugepages=4200
+python engram_host_table_pages.py --out out/host-tables-hugetlb.json --sizes-mib 256,512,1024,2048,4096,8192 --tests sizes,fresh --modes register_hugetlb --repeats 20
+sudo sysctl -q vm.nr_hugepages=0
 ```
 
-`engram_host_table.py` ends with `RESULT: OK` when every way of reading matches the table in GPU memory and the shifted-rows control does not. The hugetlbfs pages reserved for the 256 MiB to 8 GiB run are released before the 16 GiB run, which leaves `register_hugetlb` out because 16 GiB of hugetlbfs pages and a 16 GiB table in ordinary pages do not both fit in 32 GiB.
+`engram_host_table.py` ends with `RESULT: OK` when every way of reading matches the table in GPU memory and the shifted-rows control does not, and each run of `engram_host_table_pages.py` ends with `RESULT: OK`. The hugetlbfs tables are measured last, in a run of their own, because the reserved hugetlbfs pages (8.2 GiB) take memory away from the transparent-huge-page tables: with them reserved, allocating an 8 GiB transparent-huge-page table could stall for an hour in memory compaction. `vm.compact_memory=1` compacts memory before the runs that allocate transparent huge pages, for the same reason. The files in `results/` were measured with the same scripts; there the hugetlbfs tables are in `host-tables-256m-to-8g.json`.
